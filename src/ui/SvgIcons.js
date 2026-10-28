@@ -4,15 +4,6 @@
  * Emojis terminantemente proibidos como ícones.
  */
 export const SvgIcons = {
-  satellite: `
-    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 10a7.5 7.5 0 0 0 10 10"/>
-      <path d="M4 14a3.5 3.5 0 0 0 4 4"/>
-      <path d="M4 6a11.5 11.5 0 0 0 14 14"/>
-      <path d="M12 2a15.5 15.5 0 0 0 10 10"/>
-      <circle cx="4" cy="20" r="1"/>
-    </svg>
-  `,
   refresh: `
     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
