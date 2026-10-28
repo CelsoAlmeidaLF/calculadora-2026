@@ -1,0 +1,13 @@
+{
+  "name": "stk-governo-calculadora",
+  "private": true,
+  "description": "Observatório Macroeconômico do Brasil (8.2. CALCULADORA): sem dependências npm",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/test_domain_models.js",
+    "test:ui": "node --experimental-websocket tests/test_ui_smoke.mjs",
+    "versionar": "node scripts/versionar.mjs",
+    "referencia": "node scripts/build_referencia_uniao.mjs",
+    "design-system": "node ../_design-system/sync.mjs --verificar"
+  }
+}

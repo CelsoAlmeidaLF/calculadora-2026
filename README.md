@@ -1,105 +1,72 @@
-# Observatório Fiscal & Macroeconômico do Brasil
+# Observatório Macroeconômico do Brasil (8.2. CALCULADORA)
 
-MVP de alta precisão técnica e visual do **Observatório Macroeconômico e Calculadora de Impacto Fiscal da Selic sobre a Dívida Pública**, integrado com modelos matemáticos de dinâmica de dívida (FMI/Tesouro) e mobilização econômica não violenta (Gene Sharp & Erica Chenoweth - Harvard).
+Selic, inflação, impostos, juros, dívida e gastos públicos do Brasil, por habitante (IBGE) ou por eleitor (TSE 2026), com simulador da trajetória da dívida. Roda no navegador, sem servidor próprio e sem telemetria; instala como app (PWA) e abre sem internet.
 
-Desenvolvido para operar em arquitetura **Local-First / Zero-Knowledge**, com autonomia total offline, conformidade rigorosa com o **Design System Canônico Systekna** (`financ-ui.css`), tipografia **Space Grotesk** e **IBM Plex Mono**, estética **Glassmorphism 2.0 / Aero 3.0** e **isenção absoluta de emojis em ícones** (100% vetorizado em SVG).
+Desenvolvido por Celso de Almeida Leite (Systekna), outubro de 2026.
 
----
+## Fontes dos dados
 
-## 🏛️ Repositórios e Webservices Governamentais Conectados
+| Dado | Fonte | Como chega |
+|---|---|---|
+| Selic meta, IPCA 12 meses, dívida bruta (% do PIB e R$), PIB 12 meses | Banco Central, SGS: séries 432, 13522, 13762, 13761, 4382 | Ao vivo ao abrir a página (com histórico de 12 meses) |
+| População residente | IBGE, SIDRA tabela 6579 | Ao vivo |
+| Eleitorado apto 2026 (158.745.502, 1º turno, com exterior) | TSE, somado dos dados de `8.1. ELEICOES` | Valor fixo (o TSE não tem API) |
+| Gastos da União por função, 12 meses | Tesouro Nacional, SICONFI, RREO Anexo 02 (despesa liquidada) | Referência gerada por script |
+| Receita federal (impostos e contribuições) e juros pagos, 12 meses | Tesouro Nacional, SICONFI, RREO Anexo 01 | Referência gerada por script |
+| Carga tributária do país (34,2% do PIB), custo de ~R$ 50 Bi por ponto de Selic | Tesouro Nacional | Parâmetros do simulador |
 
-1. **Banco Central do Brasil (SGS - Sistema Gerenciador de Séries Temporais):**
-   - **Série 432:** Taxa de juros - Selic fixada pelo Copom (% a.a.)
-   - **Série 13522:** IPCA acumulado em 12 meses (%). A série 433 é a variação mensal e não serve para isso.
-   - **Série 13762:** Dívida Bruta do Governo Geral (% do PIB)
-   - **Série 13761:** Dívida Bruta do Governo Geral (R$ milhões)
-   - **Série 4382:** PIB acumulado em 12 meses, valores correntes (R$ milhões)
-2. **Instituto Brasileiro de Geografia e Estatística (IBGE):**
-   - População residente estimada (SIDRA, tabela 6579, variável 9324)
-3. **Tribunal Superior Eleitoral (TSE):**
-   - Eleitorado apto das Eleições 2026 (1º turno, inclui exterior): 158.745.502. Valor de referência tirado dos dados do `8.1. ELEICOES` (o TSE não tem API ao vivo para isso)
-4. **Secretaria do Tesouro Nacional (STN):**
-   - Carga Tributária Bruta (% do PIB)
-   - Sensibilidade da despesa financeira da dívida mobiliária federal (~R$ 50 Bi / ponto percentual de Selic)
-   - Gastos reais da União: despesa liquidada por função e subfunção (SICONFI, RREO Anexo 02, `id_ente=1`), acumulada em 12 meses (ano anterior fechado − ano anterior até o bimestre + ano corrente até o bimestre). Exclui intra-orçamentárias e refinanciamento da dívida. A referência offline é gerada por `node scripts/build_despesas_uniao.mjs` em `src/domain/referencia/DespesasUniaoReferencia.js` (não editar à mão)
+A API do Tesouro não manda cabeçalho CORS, então o navegador não consegue consultá-la. Os dados do SICONFI vêm de `src/domain/referencia/*.js`, gerados com `npm run referencia` (o Node não tem CORS).
 
----
+A última consulta bem-sucedida fica salva no navegador (`localStorage`); ao reabrir, a página mostra esses números enquanto busca os novos.
 
-## 📐 Modelos Matemáticos e Econômicos Implementados
+## O que a página compara
 
-### 1. Equação de Fisher (Juro Real Implícito)
-$$\left(1 + i_{\text{real}}\right) = \frac{1 + i_{\text{nominal}}}{1 + \pi} \implies i_{\text{real}} = \frac{1 + i_{\text{nominal}}}{1 + \pi} - 1$$
+- **Impostos e gastos são só da União**, dos dois lados: impostos e contribuições federais × despesa liquidada da União. Estados e municípios ficam de fora; a parte dos impostos federais repassada a eles aparece em "Transferências a estados e municípios".
+- **Juros** são os pagos pela União em 12 meses (R$ 509,5 Bi no período set/2025–ago/2026). O custo de ~R$ 50 Bi por ponto de Selic só entra na matriz "E se a Selic mudar?" e no simulador, somado aos juros pagos.
+- **Dívida bruta** é a do governo geral (União, estados e municípios), o indicador oficial do Banco Central.
+- **Simulador**: trajetória da dívida por Δd = d · (r − g)/(1 + g) − s, com juro real pela equação de Fisher. A rosca usa a composição real do gasto da União (Anexo 01), com os juros e o gasto primário ajustados pelo cenário. O imposto do simulador é a carga do país todo (34,2% do PIB), coerente com a dívida do governo geral.
+- **Link do cenário**: "Compartilhar → Copiar link deste cenário" gera `index.html#selic=11&base=eleitores&aba=tabFiscal`; quem abre vê os mesmos valores.
 
-### 2. Sustentabilidade da Dívida Pública (FMI / Tesouro Nacional)
-$$\Delta d_t = d_{t-1} \cdot \left(\frac{r - g}{1 + g}\right) - s_t$$
-Onde:
-- $d_{t-1}$: Dívida Bruta como proporção do PIB
-- $r$: Taxa real implícita de juros
-- $g$: Crescimento real do PIB
-- $s_t$: Superávit ou déficit primário como proporção do PIB
+## Identidade visual
 
-### 3. Matriz de Sensibilidade da Selic
-Projeta cenários de $-3.0\text{ pp}$ a $+3.0\text{ pp}$ em torno da taxa Selic vigente, calculando o impacto financeiro global e a variação da despesa anual por habitante.
+Usa o design system comum dos projetos 8.X, extraído do `8.1. ELEICOES`: `vendor/stk-gov/` é cópia de `../_design-system/` (não edite a cópia; ver `../_design-system/README.md`). O CSS do conteúdo da calculadora fica em `css/style.css` e `css/analista.css`.
 
-### 4. Valores por Habitante e por Eleitor
-Imposto arrecadado, dívida bruta (estoque), juros estimados (Selic × custo por ponto) e os gastos reais da União em 12 meses (Previdência, serviço da dívida, transferências a estados e municípios, assistência, saúde, educação, trabalho, defesa, Judiciário/Legislativo e demais funções) divididos pela população (IBGE) ou pelo eleitorado (TSE). O seletor "Por habitante / Por eleitor" vale para o painel, o gráfico de barras, a matriz da Selic e o simulador. Os gastos vêm da execução orçamentária do Tesouro (`UnionSpendingModel`); a partilha paramétrica da arrecadação (`PARTILHA_GASTOS`) ficou só no simulador.
-
-### 5. Módulo de Pressão Cívica Desacoplado
-O modelo de **Pressão Econômica Não Violenta & Retenção Cívica** (Gene Sharp & Erica Chenoweth - Harvard) foi segregado em um projeto autônomo e independente:
-👉 **[PRESSAO-CIVICA](../8.3.%20PRESSAO-CIVICA/README.md)**: Aplicação cívica dedicada com cálculo $V = P \cdot G \cdot D$, decomposição tributária federativa (ICMS/PIS/COFINS/IPI/ISS), notas técnicas e suíte de 23 testes unitários.
-
----
-
-## 🧱 Arquitetura Hexagonal (Ports & Adapters)
+## Estrutura
 
 ```
-8. STK-GOVERNO-BRAZIL/8.2. CALCULADORA/
-├── index.html                   # Entrypoint Web semântico e acessível
-├── css/
-│   ├── fonts.css                # Fontes canônicas locais (Space Grotesk, IBM Plex Mono)
-│   ├── style.css                # Design System (idêntico ao do 8.3. PRESSAO-CIVICA)
-│   └── analista.css             # Seletor de base, gráfico de barras e tabela por pessoa
-├── src/
-│   ├── Program.js               # Composition Root & Injeção de Dependências
-│   ├── program.js               # Symlink canônico de entrypoint
-│   ├── domain/                  # Lógica pura de negócio e modelos matemáticos
-│   │   ├── MacroState.js        # Entidade de estado macroeconômico imutável
-│   │   ├── FisherModel.js       # Equação de Fisher
-│   │   ├── DebtTrajectoryModel.js # Dinâmica e partilha da dívida pública
-│   │   ├── SensibilityMatrixModel.js # Matriz de sensibilidade do Tesouro
-│   │   ├── PublicFinanceModel.js # Impostos, dívida e gastos por habitante e por eleitor
-│   │   ├── UnionSpendingModel.js # Gastos reais da União (RREO Anexo 02, 12 meses)
-│   │   └── referencia/DespesasUniaoReferencia.js # Referência offline gerada pelo script
-│   ├── application/             # Casos de uso e orquestração
-│   │   └── MacroObservatoryService.js
-│   ├── infrastructure/          # Adapters externos
-│   │   ├── GovApiGateway.js     # Conector REST com timeout e fallback seguro
-│   │   ├── CsvExporter.js       # Exportador CSV RFC 4180 UTF-8 BOM
-│   │   └── ChartAdapter.js      # Adaptador encapsulado para Chart.js 4.4.1
-│   └── ui/                      # Camada de apresentação e interface
-│       ├── SvgIcons.js          # Ícones vetorizados Lucide / FinancIcons
-│       └── ObservatoryView.js   # Controle reativo do DOM, abas e toasts
-├── scripts/
-│   └── build_despesas_uniao.mjs # Regera a referência dos gastos da União a partir do SICONFI
-├── vendor/
-│   ├── chart.js/chart.umd.js    # Chart.js 4.4.1 vendored localmente
-│   └── fonts/                   # Arquivos .woff2 de Space Grotesk e IBM Plex Mono
-└── tests/
-    └── test_domain_models.js    # 49 testes unitários automatizados
+index.html                 Página (topo, barra lateral, abas, barra inferior do celular)
+sw.js                      Service worker (lista e versão geradas por scripts/versionar.mjs)
+manifest.webmanifest       PWA
+icons/                     Ícone oficial (original em JPEG e tamanhos gerados)
+css/                       fonts.css, style.css (conteúdo), analista.css (painel, tabelas, minigráficos)
+vendor/stk-gov/            Design system comum (cópia)
+vendor/chart.js/           Chart.js 4.4.1
+vendor/fonts/              Inter e IBM Plex Mono
+src/
+  Program.js               Composição: injeta dependências, liga shell, PWA e cenário do link
+  domain/                  MacroState, FisherModel, DebtTrajectoryModel, SensibilityMatrixModel,
+                           PublicFinanceModel, UnionSpendingModel (Anexo 02), UnionBudgetModel (Anexo 01),
+                           referencia/ (gerados por script)
+  application/             MacroObservatoryService (casos de uso, relatório, CSV, salvar/restaurar)
+  infrastructure/          GovApiGateway (BCB, IBGE, SICONFI), LocalSnapshotStore, ChartAdapter, CsvExporter
+  ui/                      ObservatoryView, CenarioUrl, SvgIcons
+scripts/
+  build_referencia_uniao.mjs  Regera as referências do Tesouro (Anexos 01 e 02)
+  versionar.mjs               Carimba a mesma versão (?v=) em todos os arquivos e no sw.js
+tests/
+  test_domain_models.js    Testes de domínio, gateway (fetch simulado) e cache
+  test_ui_smoke.mjs        Teste da tela num Chrome headless
 ```
 
----
+## Comandos
 
-## 🚀 Execução e Testes
-
-### Execução dos Testes Unitários
 ```bash
-node tests/test_domain_models.js
+python3 -m http.server 8080        # abrir em http://localhost:8080 (módulos ES e service worker exigem http)
+npm test                           # testes de domínio
+npm run test:ui                    # teste da tela (precisa de Chrome; sem ele, é pulado)
+npm run referencia                 # atualiza os dados do Tesouro (rede)
+npm run versionar                  # depois de mudar qualquer arquivo da página
+npm run design-system              # confere se vendor/stk-gov está igual a ../_design-system
 ```
 
-### Visualização no Navegador
-Abra o arquivo `index.html` em qualquer navegador moderno ou sirva via servidor local HTTP:
-```bash
-python3 -m http.server 8080
-```
-Acesse `http://localhost:8080`.
+Depois de mudar CSS ou JS, rode `npm run versionar`: sem isso o navegador pode misturar arquivos novos com antigos do cache, e a página quebra.
