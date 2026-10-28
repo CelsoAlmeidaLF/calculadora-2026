@@ -113,9 +113,9 @@ export class ChartAdapter {
   }
 
   /**
-   * Inicializa o gráfico de partilha orçamentária (Rosca / Donut)
+   * Inicializa a rosca da composição do gasto da União (rótulos e valores chegam em updateBudgetBreakdown)
    */
-  initBudgetChart(canvasEl, initialData = [42, 12, 20, 16, 10]) {
+  initBudgetChart(canvasEl) {
     if (!canvasEl || typeof Chart === 'undefined') return;
     if (this.budgetChart) this.budgetChart.destroy();
 
@@ -123,21 +123,17 @@ export class ChartAdapter {
     this.budgetChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: [
-          'Previdência e Benefícios',
-          'Juros da Dívida',
-          'Folha de Servidores',
-          'Saúde e Educação',
-          'Investimentos Livres'
-        ],
+        labels: [],
         datasets: [{
-          data: initialData,
+          data: [],
           backgroundColor: [
-            '#6C9CFF', // info
-            '#F1707B', // down
-            '#B794F6', // purple
-            '#3DD68C', // accent/up
-            '#FFD43B'  // gold
+            '#6C9CFF', // previdência
+            '#F1707B', // juros
+            '#E0A0A6', // amortização
+            '#B794F6', // transferências
+            '#3DD68C', // pessoal
+            '#FFD43B', // investimentos
+            '#8A8A8A'  // demais
           ],
           borderColor: '#1F1F1F',
           borderWidth: 3,
@@ -164,7 +160,11 @@ export class ChartAdapter {
             titleFont: { family: 'Inter' },
             bodyFont: { family: 'Inter' },
             callbacks: {
-              label: c => ` ${c.label}: R$ ${c.raw.toFixed(1).replace('.', ',')} Bi`
+              label: c => {
+                const total = c.dataset.data.reduce((a, v) => a + v, 0);
+                const pct = total > 0 ? (c.raw / total) * 100 : 0;
+                return ` ${c.label}: R$ ${c.raw.toFixed(1).replace('.', ',')} Bi (${pct.toFixed(1).replace('.', ',')}%)`;
+              }
             }
           }
         },
@@ -174,11 +174,14 @@ export class ChartAdapter {
   }
 
   /**
-   * Atualiza a partilha orçamentária
+   * Atualiza a composição do gasto
+   * @param {string[]} labels
+   * @param {number[]} values R$ Bi
    */
-  updateBudgetBreakdown(breakdownArray) {
+  updateBudgetBreakdown(labels, values) {
     if (this.budgetChart) {
-      this.budgetChart.data.datasets[0].data = breakdownArray;
+      this.budgetChart.data.labels = labels;
+      this.budgetChart.data.datasets[0].data = values;
       this.budgetChart.update();
     }
   }

@@ -1,7 +1,7 @@
 /**
  * Despesa liquidada da União (exceto intra-orçamentária, sem refinanciamento da dívida), em R$,
  * acumulada em 12 meses. Fonte: Tesouro Nacional, SICONFI, RREO Anexo 02, id_ente=1.
- * ARQUIVO GERADO por scripts/build_despesas_uniao.mjs em 2026-10-28 - não editar à mão.
+ * ARQUIVO GERADO por scripts/build_referencia_uniao.mjs em 2026-10-28 - não editar à mão.
  */
 export const DESPESAS_UNIAO_REFERENCIA = Object.freeze({
   periodo: "set/2025–ago/2026",

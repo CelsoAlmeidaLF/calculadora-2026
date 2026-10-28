@@ -1,5 +1,5 @@
-import { FisherModel } from './FisherModel.js';
-import { PublicFinanceModel } from './PublicFinanceModel.js';
+import { FisherModel } from './FisherModel.js?v=20261028-1814';
+import { UnionBudgetModel } from './UnionBudgetModel.js?v=20261028-1814';
 
 /**
  * Camada de Domínio: Modelo de Sustentabilidade e Trajetória da Dívida Pública (Tesouro / FMI)
@@ -18,6 +18,9 @@ export class DebtTrajectoryModel {
    * @param {number} params.taxRate Carga tributária bruta % do PIB
    * @param {number} params.spendVariation Variação real das despesas primárias % a.a.
    * @param {number} params.custoSelicPontoBi Custo por ponto percentual de Selic (R$ Bi)
+   * @param {number} params.jurosBaseBi Juros pagos pela União em 12 meses (R$ Bi, SICONFI)
+   * @param {number} params.selicReferencia Selic vigente quando os juros foram pagos (% a.a.)
+   * @param {Array<{chave:string, rotulo:string, bi:number}>} params.gruposOrcamento Despesa real da União por grupo (UnionBudgetModel.resumo)
    * @param {number} [params.horizon=5] Horizonte em anos
    */
   static simulate({
@@ -29,6 +32,10 @@ export class DebtTrajectoryModel {
     taxRate,
     spendVariation,
     custoSelicPontoBi = 50.0,
+    // Sem os juros pagos, estima pela Selic inteira × custo por ponto
+    jurosBaseBi = Number(selic) * Number(custoSelicPontoBi),
+    selicReferencia = selic,
+    gruposOrcamento = [],
     horizon = 5
   }) {
     const juroRealPct = FisherModel.calculateRealRate(selic, ipca);
@@ -38,7 +45,8 @@ export class DebtTrajectoryModel {
     // PIB nominal anualizado projetado (R$ Bi)
     const pibNominalProjBi = (Number(pibBaseTri) * 1000) * (1 + (Number(growth) + Number(ipca)) / 100);
     const arrecadacaoBi = pibNominalProjBi * (Number(taxRate) / 100);
-    const custoJurosBi = Number(selic) * Number(custoSelicPontoBi);
+    // Juros: os pagos de fato, corrigidos pela diferença entre a Selic simulada e a vigente
+    const custoJurosBi = UnionBudgetModel.jurosCenario(jurosBaseBi, selic, selicReferencia, custoSelicPontoBi);
 
     // Estimativa de Balanço Primário Proporcional da União
     // Receitas da União ~19,25% do PIB ajustado pela carga tributária
@@ -63,9 +71,8 @@ export class DebtTrajectoryModel {
       trajectoryTri.push(Number((pibAnoTri * currentDebt / 100).toFixed(3)));
     }
 
-    // Partilha orçamentária das despesas tributárias
-    const { previdencia, jurosDivida, servidores, saudeEducacao, outros: investimentos } =
-      PublicFinanceModel.partilha(arrecadacaoBi, custoJurosBi);
+    // Composição real da despesa da União, com os juros do cenário e o gasto primário corrigido
+    const composicao = UnionBudgetModel.cenario(gruposOrcamento, custoJurosBi, spendVariation);
 
     return {
       juroRealPct: Number(juroRealPct.toFixed(2)),
@@ -78,13 +85,7 @@ export class DebtTrajectoryModel {
       trajectoryTri,
       debtYear5: trajectory[horizon - 1],
       debtYear5Tri: trajectoryTri[horizon - 1],
-      budgetBreakdown: {
-        previdencia: Number(previdencia.toFixed(2)),
-        jurosDivida: Number(jurosDivida.toFixed(2)),
-        servidores: Number(servidores.toFixed(2)),
-        saudeEducacao: Number(saudeEducacao.toFixed(2)),
-        investimentos: Number(investimentos.toFixed(2))
-      }
+      composicao
     };
   }
 }

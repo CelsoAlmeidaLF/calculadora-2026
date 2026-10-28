@@ -1,9 +1,10 @@
-import { MacroState } from '../domain/MacroState.js';
-import { FisherModel } from '../domain/FisherModel.js';
-import { DebtTrajectoryModel } from '../domain/DebtTrajectoryModel.js';
-import { SensibilityMatrixModel } from '../domain/SensibilityMatrixModel.js';
-import { PublicFinanceModel } from '../domain/PublicFinanceModel.js';
-import { CsvExporter } from '../infrastructure/CsvExporter.js';
+import { MacroState } from '../domain/MacroState.js?v=20261028-1814';
+import { FisherModel } from '../domain/FisherModel.js?v=20261028-1814';
+import { DebtTrajectoryModel } from '../domain/DebtTrajectoryModel.js?v=20261028-1814';
+import { SensibilityMatrixModel } from '../domain/SensibilityMatrixModel.js?v=20261028-1814';
+import { PublicFinanceModel } from '../domain/PublicFinanceModel.js?v=20261028-1814';
+import { UnionBudgetModel } from '../domain/UnionBudgetModel.js?v=20261028-1814';
+import { CsvExporter } from '../infrastructure/CsvExporter.js?v=20261028-1814';
 
 /**
  * Camada de Aplicação: MacroObservatoryService
@@ -12,11 +13,13 @@ import { CsvExporter } from '../infrastructure/CsvExporter.js';
 export class MacroObservatoryService {
   /**
    * @param {Object} dependencies
-   * @param {import('../infrastructure/GovApiGateway.js').GovApiGateway} dependencies.apiGateway
+   * @param {import('../infrastructure/GovApiGateway.js?v=20261028-1814').GovApiGateway} dependencies.apiGateway
    * @param {MacroState} [dependencies.initialState]
+   * @param {import('../infrastructure/LocalSnapshotStore.js?v=20261028-1814').LocalSnapshotStore} [dependencies.cache] Última consulta salva no aparelho
    */
-  constructor({ apiGateway, initialState = null } = {}) {
+  constructor({ apiGateway, initialState = null, cache = null } = {}) {
     this.apiGateway = apiGateway;
+    this.cache = cache;
     this.state = initialState || MacroState.createDefault();
     this.listeners = new Set();
   }
@@ -42,8 +45,9 @@ export class MacroObservatoryService {
     const result = await this.apiGateway.syncAll();
 
     const changes = {
-      lastSync: result.syncedAt,
-      fontes: {}
+      lastSync: MacroObservatoryService.momento(new Date()),
+      fontes: {},
+      historicos: {}
     };
 
     // Só o que veio ao vivo é trocado; o resto continua marcado como valor de referência
@@ -54,12 +58,67 @@ export class MacroObservatoryService {
       if (valido) {
         changes[chave] = converter(item.value);
         changes.fontes[chave] = { periodo: chave === 'selic' ? 'vigente' : MacroObservatoryService.periodo(item.date), aoVivo: true };
+        if (Array.isArray(item.historico) && item.historico.length > 1) {
+          changes.historicos[chave] = item.historico.map(p => ({ data: p.data, valor: converter(p.valor) }));
+        }
       }
     }
+    if (changes.selic !== undefined) changes.selicOficial = changes.selic;
 
     this.state = this.state.with(changes);
+    if (this.contarAoVivo() > 0 && this.cache) this.cache.salvar(this.snapshot());
     this.notify();
     return result;
+  }
+
+  /**
+   * Dados ao vivo do estado atual, prontos para guardar no aparelho
+   */
+  snapshot() {
+    const s = this.state;
+    const campos = {};
+    const fontes = {};
+    for (const [, chave] of MacroObservatoryService.FEEDS) {
+      if (s.fontes[chave] && s.fontes[chave].aoVivo) {
+        campos[chave] = s[chave];
+        fontes[chave] = s.fontes[chave];
+      }
+    }
+    return { versao: 1, lastSync: s.lastSync, selicOficial: s.selicOficial, campos, fontes, historicos: s.historicos };
+  }
+
+  /**
+   * Reabre com a última consulta salva no aparelho (marcada como "salvo", não "ao vivo")
+   * @returns {boolean} true se havia algo salvo
+   */
+  restaurarSalvo() {
+    const salvo = this.cache && this.cache.ler();
+    if (!salvo || salvo.versao !== 1 || !salvo.campos) return false;
+    const fontes = {};
+    for (const [chave, f] of Object.entries(salvo.fontes || {})) fontes[chave] = { ...f, aoVivo: false, salvo: true };
+    try {
+      this.state = this.state.with({
+        ...salvo.campos,
+        selic: salvo.campos.selic ?? this.state.selic,
+        selicOficial: salvo.selicOficial ?? this.state.selicOficial,
+        lastSync: salvo.lastSync ? `${salvo.lastSync} (salvo)` : null,
+        fontes,
+        historicos: salvo.historicos || {}
+      });
+    } catch {
+      return false; // salvo de uma versão incompatível: fica com a referência
+    }
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Data e hora curtas: "28/10 às 18:40"
+   * @param {Date} d
+   */
+  static momento(d) {
+    const dois = n => String(n).padStart(2, '0');
+    return `${dois(d.getDate())}/${dois(d.getMonth() + 1)} às ${dois(d.getHours())}:${dois(d.getMinutes())}`;
   }
 
   /**
@@ -112,15 +171,23 @@ export class MacroObservatoryService {
     const s = this.state;
     return PublicFinanceModel.profile({
       pibBaseTri: s.pibBaseTri,
-      taxRatio: s.taxRatio,
-      selic: s.selic,
-      custoSelicPontoBi: s.custoSelicPontoBi,
       dbgg: s.dbgg,
       dbggTri: s.dbggTri,
       populacao: s.populacao,
       eleitores: s.eleitores,
-      despesas: s.despesas
+      despesas: s.despesas,
+      orcamento: s.orcamento
     });
+  }
+
+  /**
+   * Juros pagos pela União em 12 meses (R$ Bi), corrigidos para a Selic em uso
+   * (igual ao pago quando a Selic é a oficial; o simulador soma a diferença × custo por ponto)
+   */
+  jurosNaSelicAtual() {
+    const s = this.state;
+    const pagos = UnionBudgetModel.resumo(s.orcamento).jurosBi;
+    return UnionBudgetModel.jurosCenario(pagos, s.selic, s.selicOficial, s.custoSelicPontoBi);
   }
 
   /**
@@ -137,9 +204,10 @@ export class MacroObservatoryService {
   getMacroDashboardMetrics() {
     const s = this.state;
     const pibNominalBi = s.pibBaseTri * 1000;
-    const arrecadacaoBi = pibNominalBi * (s.taxRatio / 100);
+    const orcamento = UnionBudgetModel.resumo(s.orcamento);
+    const arrecadacaoBi = orcamento.receitaBi;
     const juroReal = FisherModel.calculateRealRate(s.selic, s.ipca);
-    const custoJurosBi = s.selic * s.custoSelicPontoBi;
+    const custoJurosBi = orcamento.jurosBi;
 
     const impostoPerCapita = (arrecadacaoBi * 1e9) / s.populacao;
     const jurosPerCapita = (custoJurosBi * 1e9) / s.populacao;
@@ -149,6 +217,7 @@ export class MacroObservatoryService {
       pibReal: s.pibReal,
       taxRatio: s.taxRatio,
       arrecadacaoBi,
+      receitaPctPib: Number(((arrecadacaoBi / pibNominalBi) * 100).toFixed(2)),
       selic: s.selic,
       ipca: s.ipca,
       juroReal: Number(juroReal.toFixed(2)),
@@ -160,7 +229,8 @@ export class MacroObservatoryService {
       dbgg: s.dbgg,
       dbggTri: s.dbggTri,
       lastSync: s.lastSync,
-      fontes: s.fontes
+      fontes: s.fontes,
+      historicos: s.historicos
     };
   }
 
@@ -173,7 +243,8 @@ export class MacroObservatoryService {
       selicAtual: s.selic,
       ipcaAtual: s.ipca,
       populacao: s.divisor(),
-      custoSelicPontoBi: s.custoSelicPontoBi
+      custoSelicPontoBi: s.custoSelicPontoBi,
+      jurosBaseBi: this.jurosNaSelicAtual()
     });
   }
 
@@ -190,7 +261,10 @@ export class MacroObservatoryService {
       ipca: s.ipca,
       taxRate: s.taxRatio,
       spendVariation: s.spendVariation,
-      custoSelicPontoBi: s.custoSelicPontoBi
+      custoSelicPontoBi: s.custoSelicPontoBi,
+      jurosBaseBi: UnionBudgetModel.resumo(s.orcamento).jurosBi,
+      selicReferencia: s.selicOficial,
+      gruposOrcamento: UnionBudgetModel.resumo(s.orcamento).grupos
     });
 
     // Resultado da simulação dividido pela base escolhida (habitante ou eleitor)
@@ -221,19 +295,20 @@ export class MacroObservatoryService {
 ----------------------------------------------------------------------
 FONTES OFICIAIS SINCRONIZADAS:
 * Banco Central do Brasil (SGS 432 / 13522 / 13762 / 13761 / 4382), IBGE (SIDRA 6579), TSE (eleitorado 2026)
-  & Tesouro Nacional (SICONFI, RREO Anexo 02 da Uniao, despesa liquidada)
+  & Tesouro Nacional (SICONFI, RREO Anexos 01 e 02 da Uniao: receita realizada e despesa liquidada)
 * Origem: ${Object.keys(s.fontes).map(k => `${k} ${s.fontes[k].aoVivo ? 'ao vivo' : 'referencia'} (${s.fontes[k].periodo})`).join(' | ')}
 * PIB Nominal Base: R$ ${s.pibBaseTri.toFixed(2).replace('.', ',')} Tri (${s.pibReal > 0 ? '+' : ''}${s.pibReal.toFixed(2).replace('.', ',')}% real a.a.)
 * Taxa Meta Selic: ${s.selic.toFixed(2).replace('.', ',')}% a.a. | Inflacao IPCA: ${s.ipca.toFixed(2).replace('.', ',')}% a.a.
 * Juro Real Implicito (Equacao de Fisher): ${m.juroReal.toFixed(2).replace('.', ',')}% a.a.
-* Carga Tributaria Bruta: ${s.taxRatio.toFixed(2).replace('.', ',')}% do PIB
+* Carga Tributaria Bruta (Uniao, estados e municipios): ${s.taxRatio.toFixed(2).replace('.', ',')}% do PIB
+* Impostos e contribuicoes federais (Uniao, 12 meses): R$ ${(m.arrecadacaoBi / 1000).toFixed(2).replace('.', ',')} Tri = ${m.receitaPctPib.toFixed(1).replace('.', ',')}% do PIB
 * Divida Bruta DBGG (Atual): ${s.dbgg.toFixed(2).replace('.', ',')}% do PIB = R$ ${s.dbggTri.toFixed(2).replace('.', ',')} Tri
 * Projecao da Divida (Ano 5): ${fiscalData ? fiscalData.debtYear5.toFixed(1).replace('.', ',') : '-'}% do PIB
 
 PERFIL FISCAL PER CAPITA (Populacao: ${s.populacao.toLocaleString('pt-BR')} hab):
-* Imposto Medio por Habitante: R$ ${m.impostoPerCapita.toLocaleString('pt-BR')} / ano
-* Custo de Juros da Divida por Habitante: R$ ${m.jurosPerCapita.toLocaleString('pt-BR')} / ano
-* Despesa Anual com Juros da Divida: R$ ${m.custoJurosBi.toFixed(1).replace('.', ',')} Bi
+* Impostos federais por Habitante: R$ ${m.impostoPerCapita.toLocaleString('pt-BR')} / ano
+* Juros pagos pela Uniao por Habitante: R$ ${m.jurosPerCapita.toLocaleString('pt-BR')} / ano
+* Juros pagos pela Uniao em 12 meses: R$ ${m.custoJurosBi.toFixed(1).replace('.', ',')} Bi (cada ponto de Selic ~ R$ ${s.custoSelicPontoBi.toFixed(0)} Bi)
 
 POR HABITANTE E POR ELEITOR (Eleitorado apto TSE 2026: ${s.eleitores.toLocaleString('pt-BR')}):
 ${linhaBase(p.imposto)}
@@ -295,5 +370,6 @@ MacroObservatoryService.FEEDS = Object.freeze([
   ['dbggReais', 'dbggTri', v => v / 1e6], // R$ milhões → R$ Tri
   ['pib', 'pibBaseTri', v => v / 1e6],    // R$ milhões → R$ Tri
   ['populacao', 'populacao', v => v],
-  ['despesas', 'despesas', v => v]           // R$ por função/subfunção, 12 meses (SICONFI)
+  ['despesas', 'despesas', v => v],          // R$ por função/subfunção, 12 meses (SICONFI Anexo 02)
+  ['orcamento', 'orcamento', v => v]         // receita e despesa por grupo, 12 meses (SICONFI Anexo 01)
 ]);

@@ -1,8 +1,10 @@
-import { FisherModel } from './FisherModel.js';
+import { FisherModel } from './FisherModel.js?v=20261028-1814';
+import { UnionBudgetModel } from './UnionBudgetModel.js?v=20261028-1814';
 
 /**
  * Camada de Domínio: Matriz de Sensibilidade do Tesouro Nacional
  * Simulação de desvios da taxa Selic sobre a despesa financeira da dívida mobiliária federal.
+ * Parte dos juros pagos de fato pela União (SICONFI) e soma a diferença de Selic × custo por ponto.
  */
 export class SensibilityMatrixModel {
   /**
@@ -12,6 +14,7 @@ export class SensibilityMatrixModel {
    * @param {number} params.ipcaAtual Inflação IPCA % a.a.
    * @param {number} params.populacao População total consolidada
    * @param {number} params.custoSelicPontoBi Custo da dívida por ponto de Selic (R$ Bi)
+   * @param {number} params.jurosBaseBi Juros pagos pela União em 12 meses, na Selic atual (R$ Bi)
    * @param {number[]} [params.deltas=[-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]] Desvios em pontos percentuais
    * @returns {Array<Object>} Lista de cenários calculados
    */
@@ -20,6 +23,7 @@ export class SensibilityMatrixModel {
     ipcaAtual,
     populacao,
     custoSelicPontoBi = 50.0,
+    jurosBaseBi = Number(selicAtual) * Number(custoSelicPontoBi),
     deltas = [-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]
   }) {
     const selic = Number(selicAtual);
@@ -30,15 +34,12 @@ export class SensibilityMatrixModel {
     return deltas.map(delta => {
       const simSelic = Math.max(1.0, selic + delta);
       const simJuroReal = FisherModel.calculateRealRate(simSelic, ipca);
-      const totalJurosBi = simSelic * custoPonto;
+      const totalJurosBi = UnionBudgetModel.jurosCenario(jurosBaseBi, simSelic, selic, custoPonto);
       const diffBi = (simSelic - selic) * custoPonto;
       const perCapitaImpact = (diffBi * 1e9) / pop;
       const isCurrent = delta === 0.0;
 
-      let cenarioLabel = `${delta > 0 ? '+' : ''}${delta.toFixed(1)} pp`;
-      if (isCurrent) {
-        cenarioLabel = '★ Atual (Oficial)';
-      }
+      const cenarioLabel = isCurrent ? 'Atual' : `${delta > 0 ? '+' : ''}${delta.toFixed(1).replace('.', ',')} ponto${Math.abs(delta) === 1 ? '' : 's'}`;
 
       return {
         delta,

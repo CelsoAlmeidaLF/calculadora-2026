@@ -1,8 +1,9 @@
-import { UnionSpendingModel } from '../domain/UnionSpendingModel.js';
+import { UnionSpendingModel } from '../domain/UnionSpendingModel.js?v=20261028-1814';
+import { UnionBudgetModel } from '../domain/UnionBudgetModel.js?v=20261028-1814';
 
 /**
  * Camada de Infraestrutura: GovApiGateway
- * Gateway de integração REST com webservices abertos do Banco Central (SGS) e IBGE.
+ * Gateway de integração REST com webservices abertos do Banco Central (SGS), IBGE e Tesouro (SICONFI).
  * Implementa estratégia Local-First com tolerância a falhas (CORS/Offline fallback) e telemetria de logs.
  */
 export class GovApiGateway {
@@ -47,15 +48,19 @@ export class GovApiGateway {
   }
 
   /**
-   * Último valor de uma série do BCB SGS
+   * Último valor de uma série do BCB SGS e o histórico dos últimos 12 meses (um ponto por mês)
    * @private
    * @param {number} serie Código da série
    * @param {string} nome Rótulo para os logs
    * @param {string} unidade Unidade para os logs (ex: '% a.a.')
-   * @returns {Promise<{value: number, date: string, source: string}|null>}
+   * @returns {Promise<{value: number, date: string, historico: Array<{data: string, valor: number}>, source: string}|null>}
    */
   async _fetchSgs(serie, nome, unidade) {
-    const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados/ultimos/1?formato=json`;
+    // Período de 1 ano: séries diárias (como a 432) não aceitam /ultimos/N com N > 1 de forma estável
+    const fim = new Date();
+    const inicio = new Date(fim.getFullYear() - 1, fim.getMonth(), fim.getDate());
+    const br = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${serie}/dados?formato=json&dataInicial=${br(inicio)}&dataFinal=${br(fim)}`;
     this.log(`Requisitando BCB SGS Série ${serie} (${nome})...`, 'info');
     // O SGS às vezes demora ou falha em uma chamada isolada: tenta mais uma vez antes de usar a referência
     for (let tentativa = 1; tentativa <= 2; tentativa++) {
@@ -64,10 +69,11 @@ export class GovApiGateway {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          const val = parseFloat(data[0].valor);
+          const ultimo = data[data.length - 1];
+          const val = parseFloat(ultimo.valor);
           if (!isNaN(val)) {
-            this.log(`BCB SGS ${serie} retornado: ${nome} = ${val.toFixed(2)}${unidade} (${data[0].data})`, 'info');
-            return { value: val, date: data[0].data, source: `BCB SGS Série ${serie}` };
+            this.log(`BCB SGS ${serie} retornado: ${nome} = ${val.toFixed(2)}${unidade} (${ultimo.data})`, 'info');
+            return { value: val, date: ultimo.data, historico: GovApiGateway.mensal(data), source: `BCB SGS Série ${serie}` };
           }
         }
         throw new Error('Payload inválido');
@@ -81,6 +87,20 @@ export class GovApiGateway {
       }
     }
     return null;
+  }
+
+  /**
+   * Reduz uma série do SGS a um ponto por mês (o último valor de cada mês)
+   * @param {Array<{data: string, valor: string}>} dados Datas em dd/mm/aaaa
+   * @returns {Array<{data: string, valor: number}>} Datas em mm/aaaa
+   */
+  static mensal(dados) {
+    const porMes = new Map();
+    for (const { data, valor } of dados) {
+      const v = parseFloat(valor);
+      if (!isNaN(v)) porMes.set(String(data).slice(3), v);
+    }
+    return [...porMes].map(([data, valor]) => ({ data, valor }));
   }
 
   /**
@@ -145,33 +165,33 @@ export class GovApiGateway {
   }
 
   /**
-   * Despesa liquidada da União por função num bimestre (Tesouro Nacional, SICONFI, RREO Anexo 02)
+   * Um anexo do RREO da União num bimestre (Tesouro Nacional, SICONFI)
    * @private
-   * @returns {Promise<Object<string, number>|null>} null quando o bimestre ainda não foi publicado
+   * @param {string} anexo Ex.: 'RREO-Anexo 02'
+   * @param {Function} extrair Leitor dos itens do anexo → valores, ou null se o bimestre não foi publicado
    */
-  async _fetchRreoUniao(ano, bimestre) {
+  async _fetchRreoUniao(ano, bimestre, anexo, extrair) {
     const url = `https://apidatalake.tesouro.gov.br/ords/siconfi/tt/rreo?an_exercicio=${ano}&nr_periodo=${bimestre}`
-      + '&co_tipo_demonstrativo=RREO&no_anexo=RREO-Anexo%2002&id_ente=1';
+      + `&co_tipo_demonstrativo=RREO&no_anexo=${encodeURIComponent(anexo)}&id_ente=1`;
     const res = await this._fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, this.siconfiTimeoutMs);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    return UnionSpendingModel.extrair(data.items);
+    return extrair(data.items);
   }
 
   /**
-   * Gastos reais da União acumulados em 12 meses, a partir do último bimestre publicado
-   * @param {number} [anoAtual] Ano corrente (padrão: o do relógio)
-   * @returns {Promise<{value: Object<string, number>, date: string, ano: number, bimestre: number, source: string}|null>}
+   * Valores de um anexo do RREO da União acumulados em 12 meses, a partir do último bimestre publicado
+   * @private
    */
-  async fetchDespesasUniao(anoAtual = new Date().getFullYear()) {
-    this.log('Consultando Tesouro Nacional SICONFI (RREO Anexo 02 da União, despesa liquidada)...', 'info');
+  async _rreoUniao12m({ anexo, extrair, descricao, anoAtual }) {
+    this.log(`Consultando Tesouro Nacional SICONFI (${anexo} da União, ${descricao})...`, 'info');
     try {
       // Procura o bimestre mais recente publicado: ano corrente do 6º ao 1º, depois o ano anterior fechado
       let ano = anoAtual;
       let bimestre = 6;
       let corrente = null;
       while (!corrente && ano >= anoAtual - 1) {
-        corrente = await this._fetchRreoUniao(ano, bimestre);
+        corrente = await this._fetchRreoUniao(ano, bimestre, anexo, extrair);
         if (!corrente) {
           bimestre -= 1;
           if (bimestre === 0) { ano -= 1; bimestre = 6; }
@@ -182,21 +202,44 @@ export class GovApiGateway {
       let valores = corrente;
       if (bimestre < 6) {
         const [fechado, mesmoPeriodo] = await Promise.all([
-          this._fetchRreoUniao(ano - 1, 6),
-          this._fetchRreoUniao(ano - 1, bimestre)
+          this._fetchRreoUniao(ano - 1, 6, anexo, extrair),
+          this._fetchRreoUniao(ano - 1, bimestre, anexo, extrair)
         ]);
         if (!fechado || !mesmoPeriodo) throw new Error(`RREO de ${ano - 1} incompleto`);
         valores = UnionSpendingModel.acumulado12m(fechado, mesmoPeriodo, corrente);
       }
 
       const periodo = UnionSpendingModel.periodo(ano, bimestre);
-      this.log(`SICONFI retornado: despesa da União em 12 meses (${periodo}) = R$ ${(valores.total / 1e12).toFixed(2)} Tri`, 'info');
-      return { value: valores, date: periodo, ano, bimestre, source: 'Tesouro Nacional SICONFI RREO Anexo 02' };
+      this.log(`SICONFI retornado: ${anexo} da União em 12 meses (${periodo})`, 'info');
+      return { value: valores, date: periodo, ano, bimestre, source: `Tesouro Nacional SICONFI ${anexo}` };
     } catch (err) {
       const motivo = err.name === 'AbortError' ? `sem resposta em ${this.siconfiTimeoutMs / 1000} s` : err.message;
-      this.log(`SICONFI indisponível (${motivo}). Mantendo gastos de referência.`, 'warn');
+      this.log(`SICONFI ${anexo} indisponível (${motivo}). Mantendo valores de referência.`, 'warn');
       return null;
     }
+  }
+
+  /**
+   * Gastos reais da União por função em 12 meses (RREO Anexo 02, despesa liquidada)
+   * @param {number} [anoAtual] Ano corrente (padrão: o do relógio)
+   * @returns {Promise<{value: Object<string, number>, date: string, ano: number, bimestre: number, source: string}|null>}
+   */
+  fetchDespesasUniao(anoAtual = new Date().getFullYear()) {
+    return this._rreoUniao12m({
+      anexo: 'RREO-Anexo 02', extrair: items => UnionSpendingModel.extrair(items),
+      descricao: 'despesa liquidada por função', anoAtual
+    });
+  }
+
+  /**
+   * Receita federal e despesa da União por grupo em 12 meses (RREO Anexo 01, Balanço Orçamentário)
+   * @param {number} [anoAtual] Ano corrente (padrão: o do relógio)
+   */
+  fetchOrcamentoUniao(anoAtual = new Date().getFullYear()) {
+    return this._rreoUniao12m({
+      anexo: 'RREO-Anexo 01', extrair: items => UnionBudgetModel.extrair(items),
+      descricao: 'receita realizada e despesa por grupo', anoAtual
+    });
   }
 
   /**
@@ -204,14 +247,15 @@ export class GovApiGateway {
    */
   async syncAll() {
     this.log('Iniciando sincronização completa com os repositórios oficiais...', 'info');
-    const [selic, ipca, dbgg, dbggReais, pib, pop, despesas] = await Promise.allSettled([
+    const [selic, ipca, dbgg, dbggReais, pib, pop, despesas, orcamento] = await Promise.allSettled([
       this.fetchSelicMeta(),
       this.fetchIpca12m(),
       this.fetchDividaBruta(),
       this.fetchDividaBrutaReais(),
       this.fetchPibNominal12m(),
       this.fetchPopulacaoIbge(),
-      this.fetchDespesasUniao()
+      this.fetchDespesasUniao(),
+      this.fetchOrcamentoUniao()
     ]);
     const valor = r => (r.status === 'fulfilled' ? r.value : null);
 
@@ -223,6 +267,7 @@ export class GovApiGateway {
       pib: valor(pib),
       populacao: valor(pop),
       despesas: valor(despesas),
+      orcamento: valor(orcamento),
       syncedAt: new Date().toLocaleTimeString('pt-BR')
     };
   }

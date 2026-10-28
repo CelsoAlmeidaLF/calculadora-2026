@@ -1,38 +1,14 @@
-import { UnionSpendingModel } from './UnionSpendingModel.js';
+import { UnionSpendingModel } from './UnionSpendingModel.js?v=20261028-1814';
+import { UnionBudgetModel } from './UnionBudgetModel.js?v=20261028-1814';
 
 /**
  * Camada de Domínio: Perfil das Finanças Públicas por Habitante e por Eleitor
  * Converte os agregados fiscais (R$ Bi) em valores por pessoa nas duas bases:
  * população residente (IBGE) e eleitorado apto (TSE).
+ * Receita, juros e gastos são todos da União (Tesouro, SICONFI), para que a comparação feche;
+ * a dívida bruta é a do governo geral (BCB), que é o indicador oficial de endividamento.
  */
-
-/**
- * Partilha paramétrica da receita tributária entre as grandes despesas (usada no simulador).
- * Os gastos reais do painel vêm do Tesouro (UnionSpendingModel).
- * Os juros não entram aqui: vêm de Selic × custo por ponto (Tesouro).
- * "Outros e investimentos" é o que sobra da arrecadação.
- */
-export const PARTILHA_GASTOS = Object.freeze({
-  previdencia: 0.42,
-  servidores: 0.20,
-  saudeEducacao: 0.16
-});
-
 export class PublicFinanceModel {
-  /**
-   * Distribui a arrecadação entre as despesas
-   * @param {number} arrecadacaoBi Receita tributária anual (R$ Bi)
-   * @param {number} jurosBi Despesa anual com juros (R$ Bi)
-   * @returns {{previdencia:number, jurosDivida:number, servidores:number, saudeEducacao:number, outros:number}}
-   */
-  static partilha(arrecadacaoBi, jurosBi) {
-    const previdencia = arrecadacaoBi * PARTILHA_GASTOS.previdencia;
-    const servidores = arrecadacaoBi * PARTILHA_GASTOS.servidores;
-    const saudeEducacao = arrecadacaoBi * PARTILHA_GASTOS.saudeEducacao;
-    const outros = Math.max(0, arrecadacaoBi - (previdencia + jurosBi + servidores + saudeEducacao));
-    return { previdencia, jurosDivida: jurosBi, servidores, saudeEducacao, outros };
-  }
-
   /**
    * Valor em R$ por pessoa, a partir de um agregado em R$ Bi
    * @param {number} valorBi
@@ -47,21 +23,18 @@ export class PublicFinanceModel {
    * Monta o perfil completo das finanças públicas
    * @param {Object} params
    * @param {number} params.pibBaseTri PIB nominal (R$ Tri)
-   * @param {number} params.taxRatio Carga tributária % do PIB
-   * @param {number} params.selic Selic % a.a.
-   * @param {number} params.custoSelicPontoBi Custo por ponto de Selic (R$ Bi)
    * @param {number} params.dbgg Dívida bruta % do PIB
    * @param {number} params.dbggTri Dívida bruta (R$ Tri)
    * @param {number} params.populacao Habitantes
    * @param {number} params.eleitores Eleitores aptos
    * @param {Object<string, number>} params.despesas Despesa liquidada da União em 12 meses (R$, por função/subfunção)
+   * @param {Object<string, number>} params.orcamento Receita e despesa por grupo da União em 12 meses (R$, RREO Anexo 01)
    */
-  static profile({ pibBaseTri, taxRatio, selic, custoSelicPontoBi, dbgg, dbggTri, populacao, eleitores, despesas }) {
+  static profile({ pibBaseTri, dbgg, dbggTri, populacao, eleitores, despesas, orcamento }) {
     const pibBi = Number(pibBaseTri) * 1000;
-    const arrecadacaoBi = pibBi * (Number(taxRatio) / 100);
-    const jurosBi = Number(selic) * Number(custoSelicPontoBi);
     const dividaBi = Number(dbggTri) * 1000;
     const gastosUniao = UnionSpendingModel.agrupar(despesas);
+    const orcamentoUniao = UnionBudgetModel.resumo(orcamento);
 
     const linha = (chave, rotulo, bi) => ({
       chave,
@@ -77,9 +50,9 @@ export class PublicFinanceModel {
       populacao: Number(populacao),
       eleitores: Number(eleitores),
       eleitoresPorHabitante: Number((Number(eleitores) / Number(populacao)).toFixed(4)),
-      imposto: linha('imposto', 'Impostos arrecadados', arrecadacaoBi),
-      divida: { ...linha('divida', 'Dívida bruta (estoque)', dividaBi), pctPib: Number(dbgg) },
-      juros: linha('juros', 'Juros da dívida (Selic × custo por ponto)', jurosBi),
+      imposto: linha('imposto', 'Impostos e contribuições federais', orcamentoUniao.receitaBi),
+      divida: { ...linha('divida', 'Dívida bruta do governo geral (estoque)', dividaBi), pctPib: Number(dbgg) },
+      juros: linha('juros', 'Juros da dívida pagos pela União', orcamentoUniao.jurosBi),
       gastosTotal: linha('gastosTotal', 'Gastos da União (total liquidado)', gastosUniao.totalBi),
       gastos: gastosUniao.grupos.map(g => ({
         ...linha(g.chave, g.rotulo, g.bi),

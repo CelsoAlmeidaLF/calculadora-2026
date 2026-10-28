@@ -1,8 +1,9 @@
-import { GovApiGateway } from './infrastructure/GovApiGateway.js';
-import { ChartAdapter } from './infrastructure/ChartAdapter.js?v=20261028d';
-import { MacroObservatoryService } from './application/MacroObservatoryService.js';
-import { ObservatoryView } from './ui/ObservatoryView.js?v=20261028d';
-import { renderIcons } from './ui/SvgIcons.js?v=20261028d';
+import { GovApiGateway } from './infrastructure/GovApiGateway.js?v=20261028-1814';
+import { ChartAdapter } from './infrastructure/ChartAdapter.js?v=20261028-1814';
+import { MacroObservatoryService } from './application/MacroObservatoryService.js?v=20261028-1814';
+import { LocalSnapshotStore } from './infrastructure/LocalSnapshotStore.js?v=20261028-1814';
+import { ObservatoryView } from './ui/ObservatoryView.js?v=20261028-1814';
+import { renderIcons } from './ui/SvgIcons.js?v=20261028-1814';
 
 /**
  * Composition Root da Aplicação
@@ -27,7 +28,8 @@ export class Program {
 
     // 3. Instanciar Aplicação
     const service = new MacroObservatoryService({
-      apiGateway
+      apiGateway,
+      cache: new LocalSnapshotStore()
     });
 
     // 4. Instanciar UI / View
@@ -45,8 +47,11 @@ export class Program {
     if (canvasBudget) chartAdapter.initBudgetChart(canvasBudget);
     if (canvasPerCapita) chartAdapter.initPerCapitaChart(canvasPerCapita);
 
-    // 6. Primeira Renderização
-    viewInstance.render();
+    // 6. Primeira Renderização: com a última consulta salva no aparelho, se houver
+    if (!service.restaurarSalvo()) viewInstance.render();
+
+    // 7. Busca os números mais recentes ao abrir (sem rede, seguem os salvos ou os de referência)
+    viewInstance.handleSyncClick({ silencioso: true });
 
     console.log('[Observatório Macroeconômico] Sistema pronto.');
   }

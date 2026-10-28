@@ -1,4 +1,4 @@
-import { renderIcons } from './SvgIcons.js?v=20261028d';
+import { renderIcons } from './SvgIcons.js?v=20261028-1814';
 
 /** Número no padrão brasileiro com casas fixas: fmt(13.4, 2) → "13,40" */
 const fmt = (v, casas) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
@@ -14,8 +14,8 @@ const NAV_PREF_KEY = 'calculadora.nav';
 export class ObservatoryView {
   /**
    * @param {Object} params
-   * @param {import('../application/MacroObservatoryService.js').MacroObservatoryService} params.service
-   * @param {import('../infrastructure/ChartAdapter.js').ChartAdapter} params.chartAdapter
+   * @param {import('../application/MacroObservatoryService.js?v=20261028-1814').MacroObservatoryService} params.service
+   * @param {import('../infrastructure/ChartAdapter.js?v=20261028-1814').ChartAdapter} params.chartAdapter
    */
   constructor({ service, chartAdapter }) {
     this.service = service;
@@ -50,6 +50,8 @@ export class ObservatoryView {
     this.feedValEleitores = document.getElementById('feedValEleitores');
     this.syncStatusEleitores = document.getElementById('syncStatusEleitores');
     this.feedValGastos = document.getElementById('feedValGastos');
+    this.feedValReceita = document.getElementById('feedValReceita');
+    this.syncStatusReceita = document.getElementById('syncStatusReceita');
     this.syncStatusGastos = document.getElementById('syncStatusGastos');
 
     // Cards Macroeconômicos Centrais
@@ -298,15 +300,17 @@ export class ObservatoryView {
   }
 
   /**
-   * Manipula clique de sincronização de APIs
+   * Busca os dados oficiais (botão "Atualizar dados" ou automaticamente ao abrir)
+   * @param {Object} [opcoes]
+   * @param {boolean} [opcoes.silencioso] Ao abrir a página: sem aviso de sucesso
    */
-  async handleSyncClick() {
+  async handleSyncClick({ silencioso = false } = {}) {
     if (this.btnSyncAPI) this.btnSyncAPI.disabled = true;
     if (this.iconSync) this.iconSync.classList.add('icon-spin');
 
     if (this.apiStatusBadge) {
       this.apiStatusBadge.className = 'badge-status syncing';
-      this.apiStatusBadge.innerHTML = '<span class="badge-pulse"></span> Sincronizando APIs...';
+      this.apiStatusBadge.innerHTML = '<span class="badge-pulse"></span> Atualizando...';
     }
 
     try {
@@ -316,7 +320,10 @@ export class ObservatoryView {
         const aoVivo = this.service.contarAoVivo();
         const total = this.service.totalSincronizavel();
         this.apiStatusBadge.className = `badge-status ${aoVivo === total ? 'active' : 'idle'}`;
-        this.apiStatusBadge.innerHTML = `<span class="badge-pulse"></span> ${aoVivo} de ${total} ao vivo${aoVivo < total ? ' · demais em referência' : ''}`;
+        const salvos = Object.values(this.service.state.fontes).some(f => f.salvo);
+        this.apiStatusBadge.innerHTML = aoVivo === 0
+          ? `<span class="badge-pulse"></span> Sem conexão · mostrando valores ${salvos ? 'salvos' : 'de referência'}`
+          : `<span class="badge-pulse"></span> ${aoVivo} de ${total} atualizados${aoVivo < total ? ' · os demais seguem com o valor anterior' : ''}`;
       }
 
       // Sincroniza sliders de simulação fiscal com os valores retornados
@@ -324,9 +331,9 @@ export class ObservatoryView {
       if (result.ipca && this.fInputIpca) this.fInputIpca.value = result.ipca.value;
       if (result.pib && this.fInputPib) this.fInputPib.value = this.service.state.pibBaseTri;
 
-      this.triggerToast('Dados macroeconômicos sincronizados com sucesso!');
+      if (!silencioso) this.triggerToast('Dados atualizados.');
     } catch (err) {
-      this.triggerToast('Falha na conexão externa. Utilizando baseline de referência oficial.');
+      this.triggerToast('Sem conexão: seguem os valores de referência.');
     } finally {
       if (this.btnSyncAPI) this.btnSyncAPI.disabled = false;
       if (this.iconSync) this.iconSync.classList.remove('icon-spin');
@@ -358,7 +365,7 @@ export class ObservatoryView {
     this.service.exportCsv({
       fiscalData: this.cachedFiscalResult
     });
-    this.triggerToast('Planilha CSV gerada e transferida com sucesso!');
+    this.triggerToast('Planilha baixada.');
   }
 
   /**
@@ -377,7 +384,7 @@ export class ObservatoryView {
   async handleCopyReport() {
     try {
       await navigator.clipboard.writeText(this.getReportText());
-      this.triggerToast('Relatório copiado para a área de transferência!');
+      this.triggerToast('Resumo copiado.');
     } catch (e) {
       this.triggerToast('Não foi possível copiar: o navegador bloqueou a área de transferência.');
     }
@@ -419,8 +426,8 @@ export class ObservatoryView {
     if (this.feedValIpca) this.feedValIpca.textContent = `${m.ipca.toFixed(2).replace('.', ',')}%`;
     if (this.feedValDbgg) this.feedValDbgg.textContent = `${m.dbgg.toFixed(2).replace('.', ',')}%`;
     if (this.feedValPop) this.feedValPop.textContent = `${(m.populacao / 1e6).toFixed(2).replace('.', ',')}M`;
-    if (this.lblLastSyncTime) this.lblLastSyncTime.textContent = m.lastSync || 'Nunca (Usando Referência)';
-    const status = f => `${f.aoVivo ? 'Ao vivo' : 'Referência'} · ${f.periodo}`;
+    if (this.lblLastSyncTime) this.lblLastSyncTime.textContent = m.lastSync || 'ainda não';
+    const status = f => `${f.aoVivo ? 'Atualizado' : (f.salvo ? 'Salvo' : 'Referência')} · ${f.periodo}`;
     if (this.syncStatusSelic) this.syncStatusSelic.textContent = status(m.fontes.selic);
     if (this.syncStatusIpca) this.syncStatusIpca.textContent = status(m.fontes.ipca);
     if (this.syncStatusDbgg) this.syncStatusDbgg.textContent = status(m.fontes.dbgg);
@@ -431,14 +438,16 @@ export class ObservatoryView {
     if (this.feedValEleitores) this.feedValEleitores.textContent = `${fmt(m.eleitores / 1e6, 2)}M`;
     if (this.feedValGastos) this.feedValGastos.textContent = `R$ ${fmt(perfil.gastosTotal.bi / 1000, 2)}`;
     if (this.syncStatusGastos) this.syncStatusGastos.textContent = status(m.fontes.despesas);
+    if (this.feedValReceita) this.feedValReceita.textContent = `R$ ${fmt(perfil.imposto.bi / 1000, 2)}`;
+    if (this.syncStatusReceita) this.syncStatusReceita.textContent = status(m.fontes.orcamento);
     document.querySelectorAll('[data-bind="periodoGastos"]').forEach(el => { el.textContent = m.fontes.despesas.periodo; });
 
     // 2. Indicadores calculados (os dados oficiais ficam nos cards de conexão)
-    if (this.macroCargaTrib) this.macroCargaTrib.textContent = `${fmt(m.taxRatio, 2)}%`;
+    if (this.macroCargaTrib) this.macroCargaTrib.textContent = `${fmt(m.receitaPctPib, 1)}%`;
     if (this.macroArrecadacao) this.macroArrecadacao.textContent = `R$ ${fmt(perfil.imposto.bi / 1000, 2)} Tri`;
     if (this.macroDividaPerCapita) this.macroDividaPerCapita.textContent = brl(porBase(perfil.divida));
     if (this.macroJuroReal) this.macroJuroReal.textContent = `${fmt(m.juroReal, 2)}% a.a.`;
-    if (this.macroJurosTotal) this.macroJurosTotal.textContent = `R$ ${m.custoJurosBi.toFixed(1).replace('.', ',')} Bi`;
+    if (this.macroJurosTotal) this.macroJurosTotal.textContent = `R$ ${fmt(m.custoJurosBi, 1)} Bi`;
     if (this.macroTaxPerCapita) this.macroTaxPerCapita.textContent = brl(porBase(perfil.imposto));
     if (this.macroDebtPerCapita) this.macroDebtPerCapita.textContent = brl(porBase(perfil.juros));
 
@@ -468,10 +477,10 @@ export class ObservatoryView {
     const grupo = titulo => `<tr class="row-group"><td colspan="5">${titulo}</td></tr>`;
 
     this.tblPerfilFiscal.innerHTML =
-      grupo('Receita e endividamento') +
+      grupo(`Receita, juros e dívida (${this.service.state.fontes.orcamento.periodo})`) +
       linha(perfil.imposto, ' <span class="text-muted">(por ano)</span>') +
       linha(perfil.divida) +
-      linha(perfil.juros, ' <span class="text-muted">(estimativa)</span>') +
+      linha(perfil.juros, ' <span class="text-muted">(12 meses)</span>') +
       grupo(`Gastos da União em 12 meses (${this.service.state.fontes.despesas.periodo})`) +
       linha(perfil.gastosTotal) +
       perfil.gastos.map(g => linha(g, ` <span class="text-muted">(${fmt(g.pctGastos, 1)}%)</span>`)).join('');
@@ -546,12 +555,6 @@ export class ObservatoryView {
     if (this.simPrimarioTotal) this.simPrimarioTotal.textContent = `${pb.primario < 0 ? 'Déficit' : 'Superávit'} de ${fmt(Math.abs(fiscal.primarioPct), 2)}% do PIB`;
     if (this.simDividaAno5) this.simDividaAno5.textContent = brl(pb.dividaAno5);
     if (this.simDividaAno5Total) this.simDividaAno5Total.textContent = `R$ ${fmt(fiscal.debtYear5Tri, 2)} Tri (${fmt(fiscal.debtYear5, 1)}% do PIB)`;
-    this.chartAdapter.updateBudgetBreakdown([
-      fiscal.budgetBreakdown.previdencia,
-      fiscal.budgetBreakdown.jurosDivida,
-      fiscal.budgetBreakdown.servidores,
-      fiscal.budgetBreakdown.saudeEducacao,
-      fiscal.budgetBreakdown.investimentos
-    ]);
+    this.chartAdapter.updateBudgetBreakdown(fiscal.composicao.map(g => g.rotulo), fiscal.composicao.map(g => g.bi));
   }
 }

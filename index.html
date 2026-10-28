@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1C1C1C">
-  <meta name="description" content="Observatório Fiscal & Macroeconômico do Brasil: Selic, impostos, dívida bruta em R$ e % do PIB, gastos públicos e simulação por habitante (IBGE) ou por eleitor (TSE).">
-  <title>Observatório Fiscal & Macroeconômico do Brasil: Conector de APIs Oficiais & Simulador</title>
+  <meta name="description" content="Selic, impostos, dívida e gastos públicos do Brasil por habitante ou por eleitor, com dados do Banco Central, IBGE, Tesouro Nacional e TSE.">
+  <title>Observatório Macroeconômico do Brasil</title>
 
   <!-- Ícone oficial do app -->
   <link rel="icon" type="image/png" sizes="32x32" href="icons/app-icon-32.png">
@@ -14,8 +14,8 @@
   <link rel="manifest" href="manifest.webmanifest">
 
   <!-- Design System Canônico & Estilos Locais -->
-  <link rel="stylesheet" href="css/style.css?v=20261028d">
-  <link rel="stylesheet" href="css/analista.css?v=20261028d">
+  <link rel="stylesheet" href="css/style.css?v=20261028-1814">
+  <link rel="stylesheet" href="css/analista.css?v=20261028-1814">
   
   <!-- Biblioteca Vendored Local-First para Gráficos -->
   <script src="vendor/chart.js/chart.umd.js"></script>
@@ -40,19 +40,19 @@
 
         <!-- Ações Globais do Header -->
         <div class="header-actions">
-          <button class="btn btn-primary" id="btnSyncAPI" title="Consultar webservices do Banco Central e IBGE">
+          <button class="btn btn-primary" id="btnSyncAPI" title="Buscar os números mais recentes no Banco Central, IBGE e Tesouro Nacional">
             <span id="iconSync" data-icon="refresh"></span>
-            Sincronizar APIs Oficiais
+            Atualizar dados
           </button>
-          <button class="btn btn-secondary" data-action="export-csv" title="Exportar dados completos em formato CSV">
+          <button class="btn btn-secondary" data-action="export-csv" title="Baixar todos os números em planilha (CSV)">
             <span data-icon="fileSpreadsheet"></span>
-            Exportar CSV
+            Baixar planilha
           </button>
-          <button class="btn btn-secondary" data-action="copy-report" title="Copiar o relatório consolidado para a área de transferência">
+          <button class="btn btn-secondary" data-action="copy-report" title="Copiar um resumo em texto">
             <span data-icon="copy"></span>
-            Copiar Relatório
+            Copiar resumo
           </button>
-          <button class="btn btn-whatsapp" data-action="share-whatsapp" title="Compartilhar relatório consolidado via WhatsApp">
+          <button class="btn btn-whatsapp" data-action="share-whatsapp" title="Enviar o resumo pelo WhatsApp">
             <span data-icon="whatsapp"></span>
             WhatsApp
           </button>
@@ -70,13 +70,13 @@
         </button>
       </div>
       <div class="side-nav-list" role="tablist" aria-orientation="vertical">
-        <button class="tab-btn active" data-tab-target="tabAPIs" role="tab" id="btnTabAPIs" aria-selected="true" aria-controls="tabAPIs" title="Painel Macro & Conector de APIs">
+        <button class="tab-btn active" data-tab-target="tabAPIs" role="tab" id="btnTabAPIs" aria-selected="true" aria-controls="tabAPIs" title="Painel da economia">
           <span data-icon="network"></span>
-          <span class="tab-label">Painel Macro & Conector de APIs</span>
+          <span class="tab-label">Painel da economia</span>
         </button>
-        <button class="tab-btn" data-tab-target="tabFiscal" role="tab" id="btnTabFiscal" aria-selected="false" aria-controls="tabFiscal" tabindex="-1" title="Simulador Fiscal & Trajetória da Dívida">
+        <button class="tab-btn" data-tab-target="tabFiscal" role="tab" id="btnTabFiscal" aria-selected="false" aria-controls="tabFiscal" tabindex="-1" title="Simulador da dívida">
           <span data-icon="chartLine"></span>
-          <span class="tab-label">Simulador Fiscal & Trajetória da Dívida</span>
+          <span class="tab-label">Simulador da dívida</span>
         </button>
       </div>
       <!-- Recolher e expandir a barra (desktop e tablet; no celular ela é gaveta) -->
@@ -91,12 +91,12 @@
     <main class="main-content">
       <div class="content-wrapper">
 
-        <!-- ABA 1: PAINEL MACRO & CONECTOR DE APIS -->
+        <!-- ABA 1: PAINEL DA ECONOMIA -->
         <div class="tab-pane active" id="tabAPIs" role="tabpanel" aria-labelledby="btnTabAPIs">
           <section class="glass-panel base-bar" aria-label="Base de cálculo">
             <div>
               <span class="base-label">Base de cálculo dos valores por pessoa</span><br>
-              <span class="base-hint">Divide os totais pela população (IBGE) ou pelo eleitorado (TSE) mostrados nos cards abaixo.</span>
+              <span class="base-hint">Os totais são divididos pela população (IBGE) ou pelo eleitorado (TSE) mostrados nos cards abaixo.</span>
             </div>
             <div class="preset-buttons" role="group" aria-label="Escolher base de cálculo">
               <button type="button" class="btn-preset highlight" data-base="populacao" aria-pressed="true">Por habitante</button>
@@ -104,16 +104,16 @@
             </div>
           </section>
 
-          <!-- STATUS DAS CONEXÕES OFICIAIS -->
+          <!-- DADOS OFICIAIS -->
           <section class="glass-panel">
             <div class="panel-header">
               <div>
-                <span class="badge-status active">Feeds Públicos em Aberto • CORS Aware & Fallback Ativo</span>
-                <h2 style="margin-top: 0.35rem;">Conexões com os Repositórios Oficiais do Estado</h2>
-                <p>Consulta REST direta aos webservices públicos do Banco Central do Brasil (SGS), do IBGE e do Tesouro Nacional (SICONFI).</p>
+                <span class="badge-status idle" id="apiStatusBadge"><span class="badge-pulse"></span> Valores de referência</span>
+                <h2 style="margin-top: 0.35rem;">Dados oficiais</h2>
+                <p>Números publicados pelo Banco Central, IBGE, Tesouro Nacional e TSE. A página busca os mais recentes ao abrir.</p>
               </div>
               <div class="panel-header-badge">
-                Última Checagem: <strong class="text-white" id="lblLastSyncTime">Nunca (Usando Referência)</strong>
+                Atualizado: <strong class="text-white" id="lblLastSyncTime">ainda não</strong>
               </div>
             </div>
 
@@ -121,7 +121,7 @@
               <!-- Selic Meta -->
               <div class="feed-card">
                 <div class="feed-meta">
-                  <span class="feed-tag">BCB SGS Série 432</span>
+                  <span class="feed-tag" title="BCB SGS Série 432">Banco Central</span>
                   <strong>Taxa Meta Selic</strong>
                   <span class="feed-status" id="syncStatusSelic">Referência · out/2026</span>
                 </div>
@@ -134,7 +134,7 @@
               <!-- IPCA 12m -->
               <div class="feed-card">
                 <div class="feed-meta">
-                  <span class="feed-tag">BCB SGS Série 13522</span>
+                  <span class="feed-tag" title="BCB SGS Série 13522">Banco Central</span>
                   <strong>IPCA Acumulado 12m</strong>
                   <span class="feed-status" id="syncStatusIpca">Referência · set/2026</span>
                 </div>
@@ -147,7 +147,7 @@
               <!-- Dívida Bruta (DBGG): % do PIB e R$ -->
               <div class="feed-card">
                 <div class="feed-meta">
-                  <span class="feed-tag">BCB SGS Séries 13762 e 13761</span>
+                  <span class="feed-tag" title="BCB SGS Séries 13762 e 13761">Banco Central</span>
                   <strong>Dívida Bruta (DBGG)</strong>
                   <span class="feed-status" id="syncStatusDbgg">Referência · ago/2026</span>
                 </div>
@@ -160,7 +160,7 @@
               <!-- PIB 12 meses -->
               <div class="feed-card">
                 <div class="feed-meta">
-                  <span class="feed-tag">BCB SGS Série 4382</span>
+                  <span class="feed-tag" title="BCB SGS Série 4382">Banco Central</span>
                   <strong>PIB Nominal 12 meses</strong>
                   <span class="feed-status" id="syncStatusPib">Referência · set/2026</span>
                 </div>
@@ -173,7 +173,7 @@
               <!-- População IBGE -->
               <div class="feed-card">
                 <div class="feed-meta">
-                  <span class="feed-tag">IBGE SIDRA 6579</span>
+                  <span class="feed-tag" title="IBGE SIDRA 6579">IBGE</span>
                   <strong>População Total</strong>
                   <span class="feed-status" id="syncStatusPop">Referência · 2026</span>
                 </div>
@@ -183,10 +183,23 @@
                 </div>
               </div>
 
+              <!-- Receita federal (Tesouro SICONFI, RREO Anexo 01) -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag" title="Tesouro SICONFI RREO Anexo 01 (receita realizada)">Tesouro Nacional</span>
+                  <strong>Impostos federais 12 meses</strong>
+                  <span class="feed-status" id="syncStatusReceita">Referência · set/2025–ago/2026</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-accent" id="feedValReceita">R$ 2,82</span>
+                  <span class="unit">Tri</span>
+                </div>
+              </div>
+
               <!-- Gastos da União (Tesouro SICONFI) -->
               <div class="feed-card">
                 <div class="feed-meta">
-                  <span class="feed-tag">Tesouro SICONFI RREO Anexo 02</span>
+                  <span class="feed-tag" title="Tesouro SICONFI RREO Anexo 02">Tesouro Nacional</span>
                   <strong>Gastos da União 12 meses</strong>
                   <span class="feed-status" id="syncStatusGastos">Referência · set/2025–ago/2026</span>
                 </div>
@@ -199,7 +212,7 @@
               <!-- Eleitorado TSE -->
               <div class="feed-card">
                 <div class="feed-meta">
-                  <span class="feed-tag">TSE Eleições 2026</span>
+                  <span class="feed-tag" title="TSE Eleições 2026">TSE</span>
                   <strong>Eleitorado Apto</strong>
                   <span class="feed-status" id="syncStatusEleitores">Referência · 1º turno, inclui exterior</span>
                 </div>
@@ -214,21 +227,21 @@
           <!-- INDICADORES CALCULADOS (os dados oficiais ficam nos cards de conexão acima) -->
           <section class="macro-cards-grid" aria-label="Indicadores calculados a partir dos dados oficiais">
             <div class="macro-kpi-card">
-              <span class="kpi-label">Juro Real (Fisher)</span>
+              <span class="kpi-label">Juro real</span>
               <div class="kpi-value text-warn" id="macroJuroReal">8,77% a.a.</div>
-              <span class="kpi-sub">Selic descontado o IPCA 12 meses</span>
+              <span class="kpi-sub">Selic descontada a inflação dos últimos 12 meses</span>
             </div>
 
             <div class="macro-kpi-card">
-              <span class="kpi-label">Impostos por <span data-base-label>habitante</span></span>
+              <span class="kpi-label">Impostos federais por <span data-base-label>habitante</span></span>
               <div class="kpi-value text-accent" id="macroTaxPerCapita">R$ 21.394</div>
-              <span class="kpi-sub">por ano · <span id="macroArrecadacao">R$ 4,58 Tri</span> no total · <span id="macroCargaTrib">34,20%</span> do PIB</span>
+              <span class="kpi-sub">por ano · <span id="macroArrecadacao">R$ 2,82 Tri</span> arrecadados pela União · <span id="macroCargaTrib">21,0%</span> do PIB</span>
             </div>
 
             <div class="macro-kpi-card">
-              <span class="kpi-label">Juros da dívida por <span data-base-label>habitante</span></span>
+              <span class="kpi-label">Juros pagos pela União por <span data-base-label>habitante</span></span>
               <div class="kpi-value text-warn" id="macroDebtPerCapita">R$ 3.209</div>
-              <span class="kpi-sub">por ano · <span id="macroJurosTotal">R$ 687,5 Bi</span> no total (Selic × R$ 50 Bi por ponto)</span>
+              <span class="kpi-sub">por ano · <span id="macroJurosTotal">R$ 509,5 Bi</span> no total · cada ponto de Selic pesa cerca de R$ 50 Bi</span>
             </div>
 
             <div class="macro-kpi-card">
@@ -276,7 +289,7 @@
                 </table>
               </div>
             </div>
-            <p class="chart-caption">Gastos: despesa liquidada da União em 12 meses (<span data-bind="periodoGastos">set/2025–ago/2026</span>), por função de governo, do RREO Anexo 02 do Tesouro Nacional (SICONFI), sem intra-orçamentárias e sem refinanciamento da dívida. "Serviço da dívida" é o juro e a amortização efetivamente pagos; a linha "Juros da dívida" é a estimativa Selic × custo por ponto. Só a União: estados e municípios ficam de fora.</p>
+            <p class="chart-caption">Tudo da União, em 12 meses (<span data-bind="periodoGastos">set/2025–ago/2026</span>), pelo Tesouro Nacional: impostos e contribuições arrecadados e despesa já executada (liquidada), sem a rolagem da dívida. Estados e municípios ficam de fora dos dois lados; a parte dos impostos federais repassada a eles aparece em "Transferências a estados e municípios". "Serviço da dívida" soma juros e amortização pagos. A dívida bruta é a do governo geral (União, estados e municípios), medida pelo Banco Central.</p>
           </section>
 
           <!-- MATRIZ DE SENSIBILIDADE DA SELIC (TESOURO NACIONAL) -->
@@ -285,9 +298,9 @@
               <div>
                 <h3 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 0.5rem;">
                   <span data-icon="split" style="color: var(--gold);"></span>
-                  Matriz de Sensibilidade: Impacto da Selic na Dívida Mobiliária (Tesouro Nacional)
+                  E se a Selic mudar? Impacto nos juros da dívida
                 </h3>
-                <p>Simulação de desvio da Selic em relação à taxa atual e variação anual de despesa financeira do governo.</p>
+                <p>Parte dos juros pagos pela União nos últimos 12 meses; cada ponto a mais ou a menos na Selic muda a conta em cerca de R$ 50 Bi por ano.</p>
               </div>
             </div>
 
@@ -295,11 +308,11 @@
               <table class="sensibility-table">
                 <thead>
                   <tr>
-                    <th>Cenário Selic</th>
-                    <th class="text-center">Taxa Nominal</th>
-                    <th class="text-center">Juro Real Implícito (Fisher)</th>
-                    <th class="text-right">Despesa Anual com Juros</th>
-                    <th class="text-right">Variação vs Cenário Atual</th>
+                    <th>Selic</th>
+                    <th class="text-center">Taxa</th>
+                    <th class="text-center">Juro real</th>
+                    <th class="text-right">Juros por ano</th>
+                    <th class="text-right">Diferença</th>
                     <th class="text-right">Impacto por <span data-base-label>habitante</span></th>
                   </tr>
                 </thead>
@@ -311,7 +324,7 @@
           </section>
         </div>
 
-        <!-- ABA 2: SIMULADOR FISCAL & TRAJETÓRIA DA DÍVIDA -->
+        <!-- ABA 2: SIMULADOR DA DÍVIDA -->
         <div class="tab-pane" id="tabFiscal" role="tabpanel" aria-labelledby="btnTabFiscal">
           <section class="glass-panel base-bar" aria-label="Base de cálculo">
             <div>
@@ -340,13 +353,13 @@
               <!-- Slider PIB Base -->
               <div class="control-group">
                 <div class="control-header">
-                  <span class="control-label">PIB Base Nominal:</span>
+                  <span class="control-label">Tamanho da economia (PIB):</span>
                   <span class="control-val text-info" id="fValPib">R$ 13,40 Tri</span>
                 </div>
                 <input type="range" id="fInputPib" min="10.0" max="16.0" step="0.1" value="13.4" aria-label="PIB Base Nominal">
                 <div class="control-scale">
                   <span>R$ 10,0 Tri</span>
-                  <span>R$ 13,4 Tri (BCB 4382)</span>
+                  <span>R$ 13,4 Tri (atual)</span>
                   <span>R$ 16,0 Tri</span>
                 </div>
               </div>
@@ -354,13 +367,13 @@
               <!-- Slider Crescimento Real -->
               <div class="control-group">
                 <div class="control-header">
-                  <span class="control-label">Crescimento Real do PIB:</span>
+                  <span class="control-label">Crescimento da economia:</span>
                   <span class="control-val text-accent" id="fValGrowth">+2,00% a.a.</span>
                 </div>
                 <input type="range" id="fInputGrowth" min="-2.0" max="5.0" step="0.1" value="2.0" aria-label="Crescimento Real do PIB">
                 <div class="control-scale">
                   <span>-2,0%</span>
-                  <span>+2,0% (SPE)</span>
+                  <span>+2,0% (projeção oficial)</span>
                   <span>+5,0%</span>
                 </div>
               </div>
@@ -368,13 +381,13 @@
               <!-- Slider Carga Tributária -->
               <div class="control-group">
                 <div class="control-header">
-                  <span class="control-label">Carga Tributária Bruta:</span>
+                  <span class="control-label">Impostos de todo o país (% do PIB):</span>
                   <span class="control-val text-accent" id="fValTax">34,20%</span>
                 </div>
                 <input type="range" id="fInputTax" min="25.0" max="42.0" step="0.1" value="34.20" aria-label="Carga Tributária Bruta">
                 <div class="control-scale">
                   <span>25,0%</span>
-                  <span>34,2% (Tesouro)</span>
+                  <span>34,2% (atual)</span>
                   <span>42,0%</span>
                 </div>
               </div>
@@ -382,7 +395,7 @@
               <!-- Slider Taxa Selic -->
               <div class="control-group">
                 <div class="control-header">
-                  <span class="control-label">Taxa Selic Nominal:</span>
+                  <span class="control-label">Taxa Selic:</span>
                   <span class="control-val text-warn" id="fValSelic">13,75% a.a.</span>
                 </div>
                 <input type="range" id="fInputSelic" min="6.0" max="16.0" step="0.25" value="13.75" aria-label="Taxa Selic Nominal">
@@ -396,7 +409,7 @@
               <!-- Slider IPCA -->
               <div class="control-group">
                 <div class="control-header">
-                  <span class="control-label">Inflação IPCA:</span>
+                  <span class="control-label">Inflação (IPCA):</span>
                   <span class="control-val text-white" id="fValIpca">4,58% a.a.</span>
                 </div>
                 <input type="range" id="fInputIpca" min="2.0" max="9.0" step="0.01" value="4.58" aria-label="Inflação IPCA">
@@ -410,7 +423,7 @@
               <!-- Slider Variação das Despesas -->
               <div class="control-group">
                 <div class="control-header">
-                  <span class="control-label">Variação Real das Despesas:</span>
+                  <span class="control-label">Variação dos gastos (acima da inflação):</span>
                   <span class="control-val" style="color: var(--accent-purple);" id="fValSpend">0,0% (Estável)</span>
                 </div>
                 <input type="range" id="fInputSpend" min="-6.0" max="6.0" step="0.5" value="0.0" aria-label="Variação Real das Despesas">
@@ -437,12 +450,12 @@
                 </div>
                 <div class="sim-results-grid">
                   <div class="macro-kpi-card">
-                    <span class="kpi-label">Imposto pago</span>
+                    <span class="kpi-label">Impostos pagos (todos os governos)</span>
                     <div class="kpi-value" id="simImposto">R$ 0</div>
                     <span class="kpi-sub" id="simImpostoTotal">R$ 0 Tri / ano</span>
                   </div>
                   <div class="macro-kpi-card">
-                    <span class="kpi-label">Juros da dívida</span>
+                    <span class="kpi-label">Juros da dívida da União</span>
                     <div class="kpi-value text-warn" id="simJuros">R$ 0</div>
                     <span class="kpi-sub" id="simJurosTotal">R$ 0 Bi / ano</span>
                   </div>
@@ -467,7 +480,7 @@
                       <span data-icon="chartLine" style="color: var(--gold);"></span>
                       Trajetória da Dívida Bruta (% do PIB) em 5 Anos
                     </h4>
-                    <p>Equação dinâmica: &Delta;d = d &middot; (r - g)/(1 + g) - s</p>
+                    <p>Projeção pelos juros reais, pelo crescimento da economia e pelo resultado das contas do governo.</p>
                   </div>
                   <span class="panel-header-badge text-gold" id="fBadgeAno5">Ano 5: 93,0% PIB</span>
                 </div>
@@ -482,9 +495,9 @@
                   <div>
                     <h4 style="font-size: 0.95rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem;">
                       <span data-icon="chartPie" style="color: var(--info);"></span>
-                      Distribuição das Despesas da Receita Tributária
+                      Para onde vai o gasto da União
                     </h4>
-                    <p>Previdência, juros da dívida pública, folha de servidores e investimentos.</p>
+                    <p>Divisão real dos últimos 12 meses (Tesouro Nacional), com os juros e o gasto ajustados pelo cenário.</p>
                   </div>
                 </div>
                 <div class="chart-doughnut-container">
@@ -552,10 +565,10 @@
 
       <div class="content-wrapper footer-content">
         <div>
-          <strong>Observatório Fiscal & Macroeconômico do Brasil</strong> • Conector Oficial BCB / IBGE
+          <strong>Observatório Macroeconômico do Brasil</strong> • Dados do Banco Central, IBGE, Tesouro Nacional e TSE
         </div>
         <div>
-          Desenvolvedor: Systekna · out/2026
+          Desenvolvido por Celso de Almeida Leite (Systekna) • Outubro de 2026
         </div>
       </div>
     </footer>
@@ -568,6 +581,6 @@
   </div>
 
   <!-- ENTRYPOINT DA APLICAÇÃO (ES6 MODULE) -->
-  <script type="module" src="src/program.js?v=20261028d"></script>
+  <script type="module" src="src/program.js?v=20261028-1814"></script>
 </body>
 </html>

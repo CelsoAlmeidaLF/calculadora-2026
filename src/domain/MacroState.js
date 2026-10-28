@@ -1,4 +1,5 @@
-import { DESPESAS_UNIAO_REFERENCIA } from './referencia/DespesasUniaoReferencia.js';
+import { DESPESAS_UNIAO_REFERENCIA } from './referencia/DespesasUniaoReferencia.js?v=20261028-1814';
+import { ORCAMENTO_UNIAO_REFERENCIA } from './referencia/OrcamentoUniaoReferencia.js?v=20261028-1814';
 
 /**
  * Camada de Domínio: Entidade MacroState
@@ -12,14 +13,17 @@ export class MacroState {
    * @param {number} params.eleitores Eleitorado apto (TSE, Eleições 2026, 1º turno, inclui exterior)
    * @param {number} params.pibBaseTri PIB nominal acumulado em 12 meses, em Trilhões BRL (BCB SGS 4382)
    * @param {number} params.pibReal Projeção de crescimento real do PIB % a.a. (SPE/Fazenda)
-   * @param {number} params.taxRatio Carga tributária bruta consolidada % do PIB (Tesouro Nacional)
-   * @param {number} params.selic Taxa Meta Selic % a.a. (Copom / BCB Série 432)
+   * @param {number} params.taxRatio Carga tributária bruta do governo geral (União, estados e municípios) % do PIB; usada só no simulador
+   * @param {number} params.selic Taxa Selic % a.a. em uso (o simulador pode mudar)
+   * @param {number} [params.selicOficial] Meta Selic vigente (Copom / BCB Série 432); referência dos juros pagos
    * @param {number} params.ipca Inflação acumulada 12m % a.a. (IPCA / BCB Série 13522)
    * @param {number} params.dbgg Dívida Bruta do Governo Geral % do PIB (BCB Série 13762)
    * @param {number} params.dbggTri Dívida Bruta do Governo Geral em Trilhões BRL (BCB Série 13761)
    * @param {number} params.custoSelicPontoBi Sensibilidade de despesa da dívida por ponto de Selic (R$ Bi / pp)
    * @param {number} params.spendVariation Variação real de despesas primárias % a.a.
    * @param {Object<string, number>} params.despesas Despesa liquidada da União em 12 meses por função/subfunção, em R$ (Tesouro SICONFI)
+   * @param {Object<string, number>} params.orcamento Receita federal e despesa da União por grupo em 12 meses, em R$ (SICONFI, RREO Anexo 01)
+   * @param {Object<string, Array<{data: string, valor: number}>>} [params.historicos] Últimos 12 meses de cada indicador do BCB (vazio até sincronizar)
    * @param {'populacao'|'eleitores'} params.baseCalculo Divisor dos valores "por pessoa"
    * @param {string|null} params.lastSync Timestamp da última sincronização oficial
    * @param {Object} [params.fontes] Período e origem de cada indicador → { periodo, aoVivo }
@@ -31,12 +35,15 @@ export class MacroState {
     pibReal = 2.00,
     taxRatio = 34.20,
     selic = 13.75,
+    selicOficial = selic,
     ipca = 4.58,
     dbgg = 82.87,
     dbggTri = 11.05,
     custoSelicPontoBi = 50.0,
     spendVariation = 0.0,
     despesas = DESPESAS_UNIAO_REFERENCIA.valores,
+    orcamento = ORCAMENTO_UNIAO_REFERENCIA.valores,
+    historicos = {},
     baseCalculo = 'populacao',
     lastSync = null,
     fontes = MacroState.FONTES_REFERENCIA
@@ -50,12 +57,15 @@ export class MacroState {
     this.pibReal = Number(pibReal);
     this.taxRatio = Number(taxRatio);
     this.selic = Number(selic);
+    this.selicOficial = Number(selicOficial);
     this.ipca = Number(ipca);
     this.dbgg = Number(dbgg);
     this.dbggTri = Number(dbggTri);
     this.custoSelicPontoBi = Number(custoSelicPontoBi);
     this.spendVariation = Number(spendVariation);
     this.despesas = Object.freeze({ ...despesas });
+    this.orcamento = Object.freeze({ ...orcamento });
+    this.historicos = Object.freeze({ ...historicos });
     this.baseCalculo = baseCalculo;
     this.lastSync = lastSync;
     this.fontes = Object.freeze({ ...fontes });
@@ -84,12 +94,15 @@ export class MacroState {
       pibReal: changes.pibReal ?? this.pibReal,
       taxRatio: changes.taxRatio ?? this.taxRatio,
       selic: changes.selic ?? this.selic,
+      selicOficial: changes.selicOficial ?? this.selicOficial,
       ipca: changes.ipca ?? this.ipca,
       dbgg: changes.dbgg ?? this.dbgg,
       dbggTri: changes.dbggTri ?? this.dbggTri,
       custoSelicPontoBi: changes.custoSelicPontoBi ?? this.custoSelicPontoBi,
       spendVariation: changes.spendVariation ?? this.spendVariation,
       despesas: changes.despesas ?? this.despesas,
+      orcamento: changes.orcamento ?? this.orcamento,
+      historicos: { ...this.historicos, ...(changes.historicos || {}) },
       baseCalculo: changes.baseCalculo ?? this.baseCalculo,
       lastSync: changes.lastSync ?? this.lastSync,
       fontes: { ...this.fontes, ...(changes.fontes || {}) }
@@ -119,5 +132,6 @@ MacroState.FONTES_REFERENCIA = Object.freeze({
   pibBaseTri: Object.freeze({ periodo: 'set/2026', aoVivo: false }),
   populacao: Object.freeze({ periodo: '2026', aoVivo: false }),
   eleitores: Object.freeze({ periodo: 'TSE 2026', aoVivo: false }),
-  despesas: Object.freeze({ periodo: DESPESAS_UNIAO_REFERENCIA.periodo, aoVivo: false })
+  despesas: Object.freeze({ periodo: DESPESAS_UNIAO_REFERENCIA.periodo, aoVivo: false }),
+  orcamento: Object.freeze({ periodo: ORCAMENTO_UNIAO_REFERENCIA.periodo, aoVivo: false })
 });
