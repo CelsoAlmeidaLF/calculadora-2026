@@ -18,10 +18,10 @@
   <meta name="apple-mobile-web-app-title" content="Calculadora">
 
   <!-- Design system comum dos projetos 8.X (cópia de _design-system/, não editar aqui) + estilos do conteúdo -->
-  <link rel="stylesheet" href="css/fonts.css?v=20261028-1822">
-  <link rel="stylesheet" href="vendor/stk-gov/stk-gov.css?v=20261028-1822">
-  <link rel="stylesheet" href="css/style.css?v=20261028-1822">
-  <link rel="stylesheet" href="css/analista.css?v=20261028-1822">
+  <link rel="stylesheet" href="css/fonts.css?v=20261028-1827">
+  <link rel="stylesheet" href="vendor/stk-gov/stk-gov.css?v=20261028-1827">
+  <link rel="stylesheet" href="css/style.css?v=20261028-1827">
+  <link rel="stylesheet" href="css/analista.css?v=20261028-1827">
   
   <!-- Biblioteca Vendored Local-First para Gráficos -->
   <script src="vendor/chart.js/chart.umd.js"></script>
@@ -303,11 +303,13 @@
                 <div class="chart-bars-container">
                   <canvas id="chartPerCapita" role="img" aria-label="Gráfico de barras: impostos e gastos públicos por pessoa por ano"></canvas>
                 </div>
+                <!-- Celular: o mesmo gráfico como lista de barras (cara de app) -->
+                <ol class="lista-barras" id="listaPerCapita" aria-label="Impostos e gastos públicos por pessoa por ano"></ol>
                 <p class="chart-caption">A dívida bruta é estoque, não fluxo anual, por isso fica só na tabela.</p>
               </div>
 
               <div class="table-responsive">
-                <table class="sensibility-table tabela-cards">
+                <table class="sensibility-table tabela-cards tabela-perfil" id="tabelaPerfil">
                   <thead>
                     <tr>
                       <th>Item</th>
@@ -339,7 +341,7 @@
             </div>
 
             <div class="table-responsive">
-              <table class="sensibility-table tabela-cards">
+              <table class="sensibility-table tabela-cards tabela-selic">
                 <thead>
                   <tr>
                     <th>Selic</th>
@@ -571,7 +573,7 @@
               </li>
               <li>
                 <a href="https://siconfi.tesouro.gov.br/" target="_blank" rel="noopener noreferrer">Tesouro Nacional, SICONFI</a>:
-                RREO Anexo 02, despesa liquidada da União por função, 12 meses.
+                RREO Anexo 01 (impostos e contribuições federais, juros pagos e despesa por grupo) e Anexo 02 (despesa liquidada por função), da União, 12 meses.
                 <a href="https://apidatalake.tesouro.gov.br/docs/siconfi/" target="_blank" rel="noopener noreferrer">API do SICONFI</a>.
               </li>
               <li>
@@ -585,7 +587,7 @@
             <ul>
               <li>
                 <a href="https://www.tesourotransparente.gov.br/" target="_blank" rel="noopener noreferrer">Tesouro Transparente</a>:
-                carga tributária bruta do governo geral (<span class="font-mono">34,2%</span> do PIB) e custo da dívida por ponto de Selic (<span class="font-mono">~R$ 50 Bi</span>).
+                carga tributária bruta do país (<span class="font-mono">34,2%</span> do PIB) e custo da dívida por ponto de Selic (<span class="font-mono">~R$ 50 Bi</span>), usados no simulador.
               </li>
               <li>
                 <a href="https://www.gov.br/fazenda/pt-br/orgaos/spe" target="_blank" rel="noopener noreferrer">Secretaria de Política Econômica (Fazenda)</a>:
@@ -627,6 +629,6 @@
   </div>
 
   <!-- ENTRYPOINT DA APLICAÇÃO (ES6 MODULE) -->
-  <script type="module" src="src/Program.js?v=20261028-1822"></script>
+  <script type="module" src="src/Program.js?v=20261028-1827"></script>
 </body>
 </html>

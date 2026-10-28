@@ -143,9 +143,17 @@ export class ChartAdapter {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // Celular: legenda embaixo da rosca, para a rosca não ficar espremida
+        onResize: (chart, tamanho) => {
+          const posicao = tamanho.width < 480 ? 'bottom' : 'right';
+          if (chart.options.plugins.legend.position !== posicao) {
+            chart.options.plugins.legend.position = posicao;
+            chart.update('none');
+          }
+        },
         plugins: {
           legend: {
-            position: 'right',
+            position: typeof window !== 'undefined' && window.innerWidth < 640 ? 'bottom' : 'right',
             labels: {
               color: '#D6D6D6',
               font: { family: 'Inter', size: 10 },

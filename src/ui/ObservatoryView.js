@@ -1,5 +1,5 @@
-import { renderIcons } from './SvgIcons.js?v=20261028-1822';
-import { CenarioUrl } from './CenarioUrl.js?v=20261028-1822';
+import { renderIcons } from './SvgIcons.js?v=20261028-1827';
+import { CenarioUrl } from './CenarioUrl.js?v=20261028-1827';
 
 /** Número no padrão brasileiro com casas fixas: fmt(13.4, 2) → "13,40" */
 const fmt = (v, casas) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
@@ -13,8 +13,8 @@ const brl = v => `${v < 0 ? '-' : ''}R$ ${Math.abs(Math.round(v)).toLocaleString
 export class ObservatoryView {
   /**
    * @param {Object} params
-   * @param {import('../application/MacroObservatoryService.js?v=20261028-1822').MacroObservatoryService} params.service
-   * @param {import('../infrastructure/ChartAdapter.js?v=20261028-1822').ChartAdapter} params.chartAdapter
+   * @param {import('../application/MacroObservatoryService.js?v=20261028-1827').MacroObservatoryService} params.service
+   * @param {import('../infrastructure/ChartAdapter.js?v=20261028-1827').ChartAdapter} params.chartAdapter
    */
   constructor({ service, chartAdapter }) {
     this.service = service;
@@ -348,12 +348,34 @@ export class ObservatoryView {
     this.renderPerfilFiscal(perfil);
     const fluxos = [perfil.imposto, perfil.gastosTotal, ...perfil.gastos];
     this.chartAdapter.updatePerCapita(fluxos.map(l => l.rotulo), fluxos.map(porBase), base.singular);
+    this.renderListaBarras(fluxos, porBase);
+    document.getElementById('tabelaPerfil')?.classList.toggle('base-eleitores', base.chave === 'eleitores');
 
     // 3. Renderizar Matriz de Sensibilidade do Tesouro
     this.renderSensibilityMatrix();
 
     // 4. Renderizar Simulação Fiscal
     this.renderFiscalSimulation();
+  }
+
+  /**
+   * Gráfico de barras em forma de lista, para o celular (nome e valor em cima, barra fina embaixo)
+   * @param {Array<Object>} linhas
+   * @param {(linha: Object) => number} valor
+   */
+  renderListaBarras(linhas, valor) {
+    const lista = document.getElementById('listaPerCapita');
+    if (!lista) return;
+    const maximo = Math.max(...linhas.map(valor), 1);
+    lista.innerHTML = linhas.map((l, i) => {
+      const v = valor(l);
+      const tipo = i === 0 ? 'receita' : (i === 1 ? 'total' : 'gasto');
+      return `<li class="lb-item lb-${tipo}">
+        <span class="lb-nome">${l.rotulo}</span>
+        <span class="lb-valor">${brl(v)}</span>
+        <span class="lb-trilho" aria-hidden="true"><span class="lb-barra" style="width: ${Math.max(1, (v / maximo) * 100).toFixed(1)}%"></span></span>
+      </li>`;
+    }).join('');
   }
 
   renderPerfilFiscal(perfil) {

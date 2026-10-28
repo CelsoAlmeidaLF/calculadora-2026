@@ -92,43 +92,6 @@
 /* O conteúdo aproveita o espaço que a barra lateral libera ao recolher */
 .app-content-area .content-wrapper { max-width: 1680px; }
 
-/* Celular: as tabelas viram cartões (nome da coluna em data-label, posto pela ObservatoryView) */
-@media (max-width: 639px) {
-  .tabela-cards thead { display: none; }
-  .tabela-cards,
-  .tabela-cards tbody { display: block; width: 100%; }
-  .tabela-cards tr {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 16px;
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .tabela-cards td {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 0;
-    border: 0;
-    text-align: left !important;
-    white-space: normal;
-  }
-  .tabela-cards td::before {
-    content: attr(data-label);
-    font-family: var(--sans);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    color: var(--text-tertiary);
-  }
-  /* Primeira célula (nome da linha) ocupa a largura toda, sem rótulo */
-  .tabela-cards td:first-child { grid-column: 1 / -1; font-weight: 600; }
-  .tabela-cards td:first-child::before { content: none; }
-  .tabela-cards tr.row-group { display: block; padding: 10px 14px 4px; border-bottom: 0; }
-  .tabela-cards tr.row-group td::before { content: none; }
-  .tabela-cards tr.baseline-row { box-shadow: inset 3px 0 0 var(--br-green-text); }
-  .table-responsive:has(.tabela-cards) { overflow-x: visible; }
-}
-
 /* Minigráfico de 12 meses nos cards de dados oficiais (cor do valor do card) */
 .feed-spark { display: block; margin-top: 4px; opacity: 0.85; }
 .feed-spark[hidden] { display: none; }
@@ -137,3 +100,123 @@
 .feed-value:has(.text-info) .feed-spark { color: var(--info); }
 .feed-value:has(.text-down) .feed-spark { color: var(--down); }
 .feed-value:has(.text-accent) .feed-spark { color: var(--accent); }
+
+/* ───────── LISTA DE BARRAS (substitui o gráfico no celular) ───────── */
+.lista-barras { display: none; list-style: none; }
+.lb-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.lb-item:last-child { border-bottom: 0; }
+.lb-nome { font-size: 0.875rem; color: #D6D6D6; min-width: 0; }
+.lb-valor { font-family: var(--mono); font-size: 0.875rem; font-weight: 600; color: var(--text-primary); text-align: right; }
+.lb-trilho { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.lb-barra { display: block; height: 100%; border-radius: 3px; background: var(--down); opacity: 0.85; transform-origin: left; animation: lbCresce 0.5s var(--stk-sidebar-ease); }
+.lb-receita .lb-barra { background: var(--accent); }
+.lb-total .lb-barra { background: var(--warn); }
+.lb-receita .lb-nome, .lb-total .lb-nome { color: #FFFFFF; font-weight: 600; }
+@keyframes lbCresce { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ───────── CELULAR (até 639 px): CARA DE APLICATIVO ───────── */
+@media (max-width: 639px) {
+  /* Respiro de app: margens menores, cartões mais arredondados */
+  .app-content-area .content-wrapper { padding: 0 12px; }
+  .main-content { padding: 12px 0 24px; }
+  .tab-pane.active { gap: 12px; }
+  .glass-panel { padding: 14px; border-radius: 14px; }
+  .panel-header { padding-bottom: 12px; margin-bottom: 12px; }
+  .panel-header h2 { font-size: 1.0625rem; }
+  .panel-header h3, .panel-header h4 { font-size: 0.875rem !important; letter-spacing: 0 !important; text-transform: none !important; }
+  .panel-header p { font-size: 0.8125rem; }
+
+  /* Seletor de base como controle segmentado de largura total */
+  .base-bar { gap: 10px; }
+  .base-bar .preset-buttons { display: grid; grid-template-columns: 1fr 1fr; width: 100%; padding: 3px; gap: 2px; background: #181818; border: 1px solid var(--border-subtle); border-radius: 10px; }
+  .base-bar .btn-preset { height: 36px; border-radius: 8px; border: 0; justify-content: center; }
+  .base-bar .base-hint { display: none; }
+
+  /* Cards oficiais: blocos de 2 colunas, valor embaixo do nome */
+  .feeds-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .feed-card { flex-direction: column; align-items: stretch; gap: 6px; padding: 12px; border-radius: 12px; }
+  .feed-meta strong { font-size: 0.8125rem; line-height: 1.25; }
+  .feed-meta .feed-status { font-size: 0.6875rem; }
+  .feed-value { text-align: left; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; }
+  .feed-value .num { display: inline; font-size: 1.125rem; }
+  .feed-spark { flex-basis: 100%; }
+  .feed-spark svg { margin-left: 0; width: 100%; }
+
+  /* Indicadores e resultados do simulador: 2 colunas */
+  .macro-cards-grid, .sim-results-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .macro-kpi-card { padding: 12px 12px 12px 16px; border-radius: 12px; }
+  .macro-kpi-card .kpi-value { font-size: 1.125rem; }
+  .macro-kpi-card .kpi-label, .macro-kpi-card .kpi-sub { font-size: 0.75rem; }
+
+  /* Gráfico de barras vira lista */
+  .chart-bars-container { display: none; }
+  .lista-barras { display: block; }
+
+  /* Rosca: mais altura para a legenda embaixo */
+  .chart-doughnut-container { height: 340px; }
+
+  /* Tabelas viram listas de app (nome da coluna em data-label, posto pela ObservatoryView) */
+  .table-responsive:has(.tabela-cards) { overflow: visible; border: 0; background: transparent; }
+  .tabela-cards thead { display: none; }
+  .tabela-cards, .tabela-cards tbody { display: block; width: 100%; }
+  .tabela-cards tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(max-content, 1fr);
+    gap: 6px 10px;
+    padding: 12px 2px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: transparent !important;
+  }
+  .tabela-cards td {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    white-space: normal;
+    font-size: 0.8125rem;
+    min-width: 0;
+  }
+  .tabela-cards td::before {
+    content: attr(data-label);
+    font-family: var(--sans);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+  }
+  /* 1ª linha do item: nome (2/3) e valor em destaque (1/3, à direita) */
+  .tabela-cards td:first-child { grid-column: 1 / 3; grid-row: 1; font-family: var(--sans); font-size: 0.875rem; font-weight: 600; color: #FFFFFF; }
+  .tabela-cards td:first-child::before { content: none; }
+  .tabela-cards tr.row-group { display: block; padding: 16px 2px 4px; border-bottom: 0; }
+  .tabela-cards tr.row-group td { font-size: 0.6875rem; background: transparent !important; }
+  .tabela-cards tr.row-group td::before { content: none; }
+
+  /* Impostos e gastos: destaque = valor por habitante (ou por eleitor, conforme a base) */
+  .tabela-perfil td:nth-child(4),
+  .tabela-perfil.base-eleitores td:nth-child(5) { grid-column: 3; grid-row: 1; align-items: flex-end; text-align: right !important; font-size: 1rem; font-weight: 600; color: #FFFFFF; white-space: nowrap; }
+  .tabela-perfil td:nth-child(4)::before,
+  .tabela-perfil.base-eleitores td:nth-child(5)::before { content: none; }
+  .tabela-perfil td:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .tabela-perfil td:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .tabela-perfil td:nth-child(5) { grid-column: 3; grid-row: 2; }
+  .tabela-perfil.base-eleitores td:nth-child(4) { grid-column: 3; grid-row: 2; align-items: flex-start; text-align: left !important; font-size: 0.8125rem; font-weight: 400; color: inherit; }
+  .tabela-perfil.base-eleitores td:nth-child(4)::before { content: attr(data-label); }
+
+  /* Matriz da Selic: destaque = juros por ano */
+  .tabela-selic td:nth-child(4) { grid-column: 3; grid-row: 1; align-items: flex-end; text-align: right !important; font-size: 1rem; font-weight: 600; white-space: nowrap; }
+  .tabela-selic td:nth-child(4)::before { content: none; }
+  .tabela-selic td:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .tabela-selic td:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .tabela-selic td:nth-child(5) { grid-column: 3; grid-row: 2; }
+  .tabela-selic td:nth-child(6) { grid-column: 1 / -1; grid-row: 3; flex-direction: row; gap: 6px; }
+  .tabela-selic td:nth-child(6)::before { content: attr(data-label) ':'; }
+  .tabela-selic tr.baseline-row { padding-left: 10px; padding-right: 8px; border-radius: 8px; background: rgba(61, 214, 140, 0.06) !important; }
+  .tabela-selic tr.baseline-row td:first-child { box-shadow: none; }
+}
