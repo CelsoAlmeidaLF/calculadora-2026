@@ -164,7 +164,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
   top: 0;
   z-index: 50;
   width: 100%;
-  min-height: var(--stk-topbar-h);
+  height: var(--stk-topbar-h);
   display: flex;
   align-items: center;
   padding: 0 24px;
@@ -206,13 +206,16 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 
 .app-logo {
   display: block;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 .app-logo-sm { width: 24px; height: 24px; border-radius: 5px; }
+@media (min-width: 640px) {
+  .app-logo:not(.app-logo-sm) { width: 36px; height: 36px; border-radius: 8px; }
+}
 
 .brand-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-width: 0; }
 
@@ -314,7 +317,6 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
   transform: translateY(-0.5px);
 }
 
-.action-btn .stk-icon { width: 15px; height: 15px; }
 .action-btn-text { display: inline; }
 
 /* Menu suspenso de um botão (ex.: Compartilhar) */
@@ -519,7 +521,6 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.3s var(--stk-sidebar-ease);
 }
-.app-sidebar.sidebar-collapsed .sidebar-nav-item { padding: 0 16px; }
 
 /* Fundo escuro da gaveta */
 .sidebar-backdrop {
@@ -534,7 +535,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 
 /* Tablet e celular: a barra vira gaveta que desliza da esquerda */
 @media (max-width: 1023px) {
-  .app-topbar { padding: 8px 20px; }
+  .app-topbar { height: auto; padding: 8px 20px; }
 
   .app-sidebar,
   .app-sidebar.sidebar-collapsed {
@@ -564,7 +565,6 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
   .app-sidebar .sidebar-title-text { opacity: 1; transform: none; }
   .app-sidebar .sidebar-nav-item { padding: 0 12px; }
 
-  .sidebar-desktop-header { display: none; }
   .sidebar-drawer-header {
     display: flex;
     padding: 0 6px 12px;
@@ -609,7 +609,6 @@ body.stk-drawer-open { overflow: hidden; }
   .btn-hamburger,
   .topbar-divider { display: none; }
   .action-btn-text { display: none; }
-  .action-btn { width: 36px; height: 36px; padding: 0; }
   .brand-subtext { font-size: 0.75rem; }
   .badge-status { font-size: 0.6875rem; }
 

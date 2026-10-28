@@ -20,12 +20,15 @@ export class StkGovShell {
    * @param {Object} [opcoes]
    * @param {string} [opcoes.app] Nome curto do app, separa o estado salvo de cada projeto
    * @param {(abaId: string) => void} [opcoes.onTabChange] Chamado depois de trocar de aba
+   * @param {boolean} [opcoes.gerenciarAbas=true] false quando o projeto já cuida das abas (só menu, gaveta e menus suspensos)
+   * @param {string} [opcoes.chaveRecolhida] Chave do localStorage da barra recolhida (padrão: "<app>.sidebar.recolhida")
    * @param {Document} [opcoes.doc]
    */
-  constructor({ app = 'stk', onTabChange = () => {}, doc = document } = {}) {
+  constructor({ app = 'stk', onTabChange = () => {}, gerenciarAbas = true, chaveRecolhida, doc = document } = {}) {
     this.doc = doc;
     this.onTabChange = onTabChange;
-    this.chaveRecolhida = `${app}.sidebar.recolhida`;
+    this.gerenciarAbas = gerenciarAbas;
+    this.chaveRecolhida = chaveRecolhida || `${app}.sidebar.recolhida`;
     this.sidebar = doc.getElementById('appSidebar');
     this.backdrop = doc.getElementById('sidebarBackdrop');
     this.btnToggle = doc.getElementById('btnToggleSidebar');
@@ -46,20 +49,7 @@ export class StkGovShell {
     });
     this.gaveta.addEventListener('change', () => { this.fecharGaveta(false); this._sincronizar(); });
 
-    // Abas: barra lateral e barra inferior apontam para a mesma aba com data-tab
-    this.doc.querySelectorAll('[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => this.trocarAba(btn.dataset.tab));
-    });
-    // Setas, Home e End percorrem a lista de abas da barra lateral
-    const itens = [...this.doc.querySelectorAll('.sidebar-nav-list [data-tab]')];
-    itens.forEach((btn, i) => btn.addEventListener('keydown', e => {
-      const destino = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: itens.length - 1 }[e.key];
-      if (destino === undefined) return;
-      e.preventDefault();
-      const proximo = itens[(destino + itens.length) % itens.length];
-      proximo.focus();
-      this.trocarAba(proximo.dataset.tab);
-    }));
+    if (this.gerenciarAbas) this._ligarAbas();
 
     // Menus suspensos dos botões (ex.: Compartilhar)
     this.doc.querySelectorAll('.action-menu').forEach(menu => {
@@ -75,9 +65,26 @@ export class StkGovShell {
     });
     this.doc.addEventListener('click', () => this.fecharMenus());
 
+    this._sincronizar();
+  }
+
+  /** Abas: barra lateral e barra inferior apontam para a mesma aba com data-tab */
+  _ligarAbas() {
+    this.doc.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => this.trocarAba(btn.dataset.tab));
+    });
+    // Setas, Home e End percorrem a lista de abas da barra lateral
+    const itens = [...this.doc.querySelectorAll('.sidebar-nav-list [data-tab]')];
+    itens.forEach((btn, i) => btn.addEventListener('keydown', e => {
+      const destino = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: itens.length - 1 }[e.key];
+      if (destino === undefined) return;
+      e.preventDefault();
+      const proximo = itens[(destino + itens.length) % itens.length];
+      proximo.focus();
+      this.trocarAba(proximo.dataset.tab);
+    }));
     const ativa = this.doc.querySelector('.sidebar-nav-item.active[data-tab]') || itens[0];
     if (ativa) this.trocarAba(ativa.dataset.tab, { avisar: false });
-    this._sincronizar();
   }
 
   /** Botão de menu: gaveta no tablet e no celular, recolher/expandir no desktop */
