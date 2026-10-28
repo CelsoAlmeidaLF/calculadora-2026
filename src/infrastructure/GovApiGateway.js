@@ -1,5 +1,5 @@
-import { UnionSpendingModel } from '../domain/UnionSpendingModel.js?v=20261028-1814';
-import { UnionBudgetModel } from '../domain/UnionBudgetModel.js?v=20261028-1814';
+import { UnionSpendingModel } from '../domain/UnionSpendingModel.js?v=20261028-1820';
+import { UnionBudgetModel } from '../domain/UnionBudgetModel.js?v=20261028-1820';
 
 /**
  * Camada de Infraestrutura: GovApiGateway
@@ -12,9 +12,12 @@ export class GovApiGateway {
    * @param {number} [options.timeoutMs=10000] Timeout para requisições
    * @param {number} [options.siconfiTimeoutMs=20000] Timeout das consultas ao SICONFI (respostas de ~1 MB)
    * @param {Function} [options.onLog] Callback para streaming de logs técnicos
+   * @param {boolean} [options.incluirTesouro=true] Consulta o SICONFI. No navegador use false: a API do Tesouro
+   *   não manda cabeçalho CORS, então só funciona no Node (scripts/build_referencia_uniao.mjs)
    */
-  constructor({ timeoutMs = 10000, siconfiTimeoutMs = 20000, onLog = null } = {}) {
+  constructor({ timeoutMs = 10000, siconfiTimeoutMs = 20000, onLog = null, incluirTesouro = true } = {}) {
     this.timeoutMs = timeoutMs;
+    this.incluirTesouro = incluirTesouro;
     this.siconfiTimeoutMs = siconfiTimeoutMs;
     this.onLog = onLog || (() => {});
   }
@@ -254,8 +257,8 @@ export class GovApiGateway {
       this.fetchDividaBrutaReais(),
       this.fetchPibNominal12m(),
       this.fetchPopulacaoIbge(),
-      this.fetchDespesasUniao(),
-      this.fetchOrcamentoUniao()
+      this.incluirTesouro ? this.fetchDespesasUniao() : null,
+      this.incluirTesouro ? this.fetchOrcamentoUniao() : null
     ]);
     const valor = r => (r.status === 'fulfilled' ? r.value : null);
 
@@ -268,6 +271,7 @@ export class GovApiGateway {
       populacao: valor(pop),
       despesas: valor(despesas),
       orcamento: valor(orcamento),
+      ignorados: this.incluirTesouro ? [] : ['despesas', 'orcamento'],
       syncedAt: new Date().toLocaleTimeString('pt-BR')
     };
   }

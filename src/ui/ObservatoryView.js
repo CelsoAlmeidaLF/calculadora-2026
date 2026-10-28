@@ -1,11 +1,10 @@
-import { renderIcons } from './SvgIcons.js?v=20261028-1814';
+import { renderIcons } from './SvgIcons.js?v=20261028-1820';
+import { CenarioUrl } from './CenarioUrl.js?v=20261028-1820';
 
 /** Número no padrão brasileiro com casas fixas: fmt(13.4, 2) → "13,40" */
 const fmt = (v, casas) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 /** Valor inteiro em reais: brl(-1234) → "-R$ 1.234" */
 const brl = v => `${v < 0 ? '-' : ''}R$ ${Math.abs(Math.round(v)).toLocaleString('pt-BR')}`;
-/** Chave do navegador que guarda a barra lateral recolhida ou expandida */
-const NAV_PREF_KEY = 'calculadora.nav';
 
 /**
  * Camada de UI: ObservatoryView
@@ -14,8 +13,8 @@ const NAV_PREF_KEY = 'calculadora.nav';
 export class ObservatoryView {
   /**
    * @param {Object} params
-   * @param {import('../application/MacroObservatoryService.js?v=20261028-1814').MacroObservatoryService} params.service
-   * @param {import('../infrastructure/ChartAdapter.js?v=20261028-1814').ChartAdapter} params.chartAdapter
+   * @param {import('../application/MacroObservatoryService.js?v=20261028-1820').MacroObservatoryService} params.service
+   * @param {import('../infrastructure/ChartAdapter.js?v=20261028-1820').ChartAdapter} params.chartAdapter
    */
   constructor({ service, chartAdapter }) {
     this.service = service;
@@ -94,18 +93,6 @@ export class ObservatoryView {
     this.fValSpend = document.getElementById('fValSpend');
     this.fBadgeAno5 = document.getElementById('fBadgeAno5');
 
-    // Barra lateral de navegação
-    this.mainHeader = document.querySelector('.main-header');
-    this.sideNav = document.getElementById('sideNav');
-    this.btnNavToggle = document.getElementById('btnNavToggle');
-    this.btnNavClose = document.getElementById('btnNavClose');
-    this.btnNavCollapse = document.getElementById('btnNavCollapse');
-    this.navBackdrop = document.getElementById('navBackdrop');
-    this.navGaveta = window.matchMedia('(max-width: 639px)');
-    this.navTablet = window.matchMedia('(min-width: 640px) and (max-width: 1099px)');
-    // Escolha de quem recolheu ou expandiu a barra ('rail' | 'full'); sem escolha, segue a largura
-    try { this.navPreferencia = localStorage.getItem(NAV_PREF_KEY); } catch { this.navPreferencia = null; }
-
     // Toast
     this.toastNotification = document.getElementById('toastNotification');
     this.toastMessage = document.getElementById('toastMessage');
@@ -115,50 +102,6 @@ export class ObservatoryView {
     // Sincronização API
     if (this.btnSyncAPI) {
       this.btnSyncAPI.addEventListener('click', () => this.handleSyncClick());
-    }
-
-    // Abas de navegação (barra lateral): clique troca a aba e, no celular, fecha a gaveta
-    const abas = [...document.querySelectorAll('[data-tab-target]')];
-    abas.forEach((btn, i) => {
-      btn.addEventListener('click', e => {
-        const target = e.currentTarget.getAttribute('data-tab-target');
-        this.switchTab(target);
-        this.closeNav();
-      });
-      // Setas, Home e End movem entre as abas (tablist vertical)
-      btn.addEventListener('keydown', e => {
-        const destino = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: abas.length - 1 }[e.key];
-        if (destino === undefined) return;
-        e.preventDefault();
-        const proxima = abas[(destino + abas.length) % abas.length];
-        proxima.focus();
-        this.switchTab(proxima.getAttribute('data-tab-target'));
-      });
-    });
-
-    // Botão de menu: recolhe e expande a barra (no celular, abre a gaveta); fechar, fundo escuro e Esc fecham a gaveta
-    if (this.btnNavToggle) this.btnNavToggle.addEventListener('click', () => this.toggleNav());
-    if (this.btnNavCollapse) this.btnNavCollapse.addEventListener('click', () => this.toggleNav());
-    if (this.btnNavClose) this.btnNavClose.addEventListener('click', () => this.closeNav());
-    if (this.navBackdrop) this.navBackdrop.addEventListener('click', () => this.closeNav());
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') this.closeNav();
-    });
-    // Gaveta fechada fica inerte (fora do Tab e do leitor de tela); no desktop e no tablet, nunca
-    this.navGaveta.addEventListener('change', () => {
-      this.closeNav(false);
-      this._atualizarInercia();
-      this._aplicarModoNav();
-    });
-    this.navTablet.addEventListener('change', () => this._aplicarModoNav());
-    this._atualizarInercia();
-    this._aplicarModoNav();
-
-    // A barra lateral fica logo abaixo do topo, que muda de altura quando os botões quebram linha
-    if (this.mainHeader && typeof ResizeObserver !== 'undefined') {
-      new ResizeObserver(() => {
-        document.documentElement.style.setProperty('--header-h', `${this.mainHeader.offsetHeight}px`);
-      }).observe(this.mainHeader);
     }
 
     // Base de cálculo: habitante (IBGE) ou eleitor (TSE)
@@ -189,6 +132,9 @@ export class ObservatoryView {
     document.querySelectorAll('[data-action="copy-report"]').forEach(btn => {
       btn.addEventListener('click', () => this.handleCopyReport());
     });
+    document.querySelectorAll('[data-action="copy-link"]').forEach(btn => {
+      btn.addEventListener('click', () => this.handleCopyLink());
+    });
 
     // Inscrição a mudanças no serviço
     this.service.subscribe(() => {
@@ -197,106 +143,52 @@ export class ObservatoryView {
   }
 
   /**
-   * Transição entre abas
+   * Chamado pelo shell comum (StkGovShell) depois de trocar de aba
+   * @param {string} tabId
    */
-  switchTab(tabId) {
+  aoTrocarAba(tabId) {
     this.activeTab = tabId;
-    document.querySelectorAll('.tab-pane').forEach(pane => {
-      pane.classList.remove('active');
-    });
-    document.querySelectorAll('[data-tab-target]').forEach(btn => {
-      btn.classList.remove('active');
-      btn.setAttribute('aria-selected', 'false');
-      btn.setAttribute('tabindex', '-1');
-    });
+    // Os gráficos acompanham a largura da aba que apareceu
+    setTimeout(() => this.chartAdapter.resizeAll(), 50);
+  }
 
-    const activePane = document.getElementById(tabId);
-    if (activePane) activePane.classList.add('active');
+  /**
+   * Parâmetros do simulador e base de cálculo atuais, para montar o link do cenário
+   */
+  cenarioAtual() {
+    const s = this.service.state;
+    return {
+      pib: s.pibBaseTri, crescimento: s.pibReal, carga: s.taxRatio,
+      selic: s.selic, ipca: s.ipca, gastos: s.spendVariation,
+      base: s.baseCalculo, aba: this.activeTab
+    };
+  }
 
-    const activeBtn = document.querySelector(`[data-tab-target="${tabId}"]`);
-    if (activeBtn) {
-      activeBtn.classList.add('active');
-      activeBtn.setAttribute('aria-selected', 'true');
-      activeBtn.removeAttribute('tabindex');
+  /**
+   * Aplica um cenário recebido por link: sliders, estado e aba
+   * @param {Object} cenario Saída de CenarioUrl.ler()
+   * @returns {string|null} Aba pedida no link
+   */
+  aplicarCenario(cenario) {
+    if (!cenario) return null;
+    const campos = [
+      [this.fInputPib, cenario.pib], [this.fInputGrowth, cenario.crescimento], [this.fInputTax, cenario.carga],
+      [this.fInputSelic, cenario.selic], [this.fInputIpca, cenario.ipca], [this.fInputSpend, cenario.gastos]
+    ];
+    campos.forEach(([input, valor]) => { if (input && valor !== undefined) input.value = valor; });
+    this.handleFiscalInputChange();
+    if (cenario.base) this.service.setBaseCalculo(cenario.base);
+    return cenario.aba || null;
+  }
+
+  async handleCopyLink() {
+    const url = CenarioUrl.montar(location.href, this.cenarioAtual());
+    try {
+      await navigator.clipboard.writeText(url);
+      this.triggerToast('Link do cenário copiado. Quem abrir verá os mesmos valores.');
+    } catch (e) {
+      this.triggerToast('Não foi possível copiar: o navegador bloqueou a área de transferência.');
     }
-
-    // Reajusta dimensões de gráficos ao exibir a aba
-    setTimeout(() => {
-      this.chartAdapter.resizeAll();
-    }, 50);
-  }
-
-  /**
-   * Botão de menu: no celular abre ou fecha a gaveta; no desktop e no tablet recolhe ou expande a barra
-   */
-  toggleNav() {
-    if (!this.sideNav) return;
-    if (this.navGaveta.matches) {
-      if (this.sideNav.classList.contains('open')) this.closeNav();
-      else this.openNav();
-      return;
-    }
-    this.navPreferencia = this.sideNav.classList.contains('rail') ? 'full' : 'rail';
-    try { localStorage.setItem(NAV_PREF_KEY, this.navPreferencia); } catch { /* sem armazenamento: vale só nesta visita */ }
-    this._aplicarModoNav();
-    // Os gráficos acompanham a nova largura do conteúdo depois da animação
-    setTimeout(() => this.chartAdapter.resizeAll(), 250);
-  }
-
-  /**
-   * Barra expandida ou em trilho de ícones (desktop e tablet); no celular vale a gaveta
-   */
-  _aplicarModoNav() {
-    if (!this.sideNav) return;
-    const gaveta = this.navGaveta.matches;
-    const rail = !gaveta && (this.navPreferencia ? this.navPreferencia === 'rail' : this.navTablet.matches);
-    this.sideNav.classList.toggle('rail', rail);
-    if (this.btnNavCollapse) {
-      const rotuloBarra = rail ? 'Expandir menu de navegação' : 'Recolher menu de navegação';
-      this.btnNavCollapse.setAttribute('aria-expanded', String(!rail));
-      this.btnNavCollapse.setAttribute('aria-label', rotuloBarra);
-      this.btnNavCollapse.title = rotuloBarra;
-    }
-    if (!this.btnNavToggle) return;
-    const expandida = gaveta ? this.sideNav.classList.contains('open') : !rail;
-    this.btnNavToggle.setAttribute('aria-expanded', String(expandida));
-    const rotulo = gaveta
-      ? (expandida ? 'Fechar menu de navegação' : 'Abrir menu de navegação')
-      : (expandida ? 'Recolher menu de navegação' : 'Expandir menu de navegação');
-    this.btnNavToggle.setAttribute('aria-label', rotulo);
-    this.btnNavToggle.title = rotulo;
-  }
-
-  /**
-   * Abre a gaveta de navegação (só no celular; no desktop e no tablet a barra é fixa)
-   */
-  openNav() {
-    if (!this.sideNav || !this.navGaveta.matches) return;
-    this.sideNav.classList.add('open');
-    this._atualizarInercia();
-    if (this.navBackdrop) this.navBackdrop.hidden = false;
-    this._aplicarModoNav();
-    document.body.classList.add('nav-aberta');
-    const ativa = this.sideNav.querySelector('.tab-btn.active');
-    if (ativa) ativa.focus();
-  }
-
-  /**
-   * Fecha a gaveta de navegação
-   * @param {boolean} [devolverFoco] Volta o foco ao botão de menu
-   */
-  closeNav(devolverFoco = true) {
-    if (!this.sideNav || !this.sideNav.classList.contains('open')) return;
-    this.sideNav.classList.remove('open');
-    this._atualizarInercia();
-    if (this.navBackdrop) this.navBackdrop.hidden = true;
-    this._aplicarModoNav();
-    document.body.classList.remove('nav-aberta');
-    if (devolverFoco && this.btnNavToggle && this.navGaveta.matches) this.btnNavToggle.focus();
-  }
-
-  _atualizarInercia() {
-    if (this.sideNav) this.sideNav.inert = this.navGaveta.matches && !this.sideNav.classList.contains('open');
   }
 
   /**
@@ -484,6 +376,20 @@ export class ObservatoryView {
       grupo(`Gastos da União em 12 meses (${this.service.state.fontes.despesas.periodo})`) +
       linha(perfil.gastosTotal) +
       perfil.gastos.map(g => linha(g, ` <span class="text-muted">(${fmt(g.pctGastos, 1)}%)</span>`)).join('');
+    ObservatoryView.rotularColunas(this.tblPerfilFiscal);
+  }
+
+  /**
+   * Põe em cada célula o nome da coluna (data-label), que o celular mostra quando a tabela vira cartões
+   * @param {HTMLElement} tbody
+   */
+  static rotularColunas(tbody) {
+    const titulos = [...tbody.closest('table').querySelectorAll('thead th')].map(th => th.textContent.trim());
+    tbody.querySelectorAll('tr').forEach(tr => {
+      [...tr.children].forEach((td, i) => {
+        if (!td.hasAttribute('colspan')) td.dataset.label = titulos[i] || '';
+      });
+    });
   }
 
   renderSensibilityMatrix() {
@@ -516,6 +422,7 @@ export class ObservatoryView {
       `;
       this.tblSensibilidadeSelic.appendChild(tr);
     });
+    ObservatoryView.rotularColunas(this.tblSensibilidadeSelic);
   }
 
   renderFiscalSimulation() {

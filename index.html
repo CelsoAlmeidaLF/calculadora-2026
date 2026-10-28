@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1C1C1C">
   <meta name="description" content="Selic, impostos, dívida e gastos públicos do Brasil por habitante ou por eleitor, com dados do Banco Central, IBGE, Tesouro Nacional e TSE.">
   <title>Observatório Macroeconômico do Brasil</title>
@@ -12,82 +12,112 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/app-icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Calculadora">
 
-  <!-- Design System Canônico & Estilos Locais -->
-  <link rel="stylesheet" href="css/style.css?v=20261028-1814">
-  <link rel="stylesheet" href="css/analista.css?v=20261028-1814">
+  <!-- Design system comum dos projetos 8.X (cópia de _design-system/, não editar aqui) + estilos do conteúdo -->
+  <link rel="stylesheet" href="css/fonts.css?v=20261028-1820">
+  <link rel="stylesheet" href="vendor/stk-gov/stk-gov.css?v=20261028-1820">
+  <link rel="stylesheet" href="css/style.css?v=20261028-1820">
+  <link rel="stylesheet" href="css/analista.css?v=20261028-1820">
   
   <!-- Biblioteca Vendored Local-First para Gráficos -->
   <script src="vendor/chart.js/chart.umd.js"></script>
 </head>
 <body>
-  <div class="app-container">
-    <!-- BARRA SUPERIOR / HEADER GLOBAL -->
-    <header class="main-header">
-      <div class="content-wrapper header-content">
-        <!-- Marca & Status das APIs -->
-        <div class="brand-section">
-          <button type="button" class="nav-toggle" id="btnNavToggle" aria-controls="sideNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-            <span data-icon="menu"></span>
-          </button>
-          <img class="brand-logo" src="icons/app-icon-64.png" width="36" height="36" alt="" aria-hidden="true">
-          <div class="brand-titles">
-            <h1>
-              Observatório Macroeconômico do Brasil
-            </h1>
+  <!-- Aviso de falha: estático para aparecer mesmo se os módulos JS não carregarem -->
+  <div id="appFatalError" class="app-fatal-error" role="alert" hidden>
+    <strong>Não foi possível carregar a calculadora.</strong>
+    <p id="appFatalErrorDetail">Recarregue a página. Se continuar, abra o site por um servidor local (ex.: <code>python3 -m http.server</code>).</p>
+  </div>
+
+  <!-- TOPO -->
+  <header class="app-topbar" id="appTopbar">
+    <div class="topbar-inner">
+      <div class="topbar-brand-section">
+        <button type="button" class="btn-hamburger" id="btnToggleSidebar" aria-controls="appSidebar" aria-expanded="true" aria-label="Recolher menu" title="Recolher menu">
+          <span data-stk-icon="panelLeft"></span>
+        </button>
+        <div class="topbar-divider"></div>
+        <div class="topbar-brand">
+          <img class="app-logo" src="icons/app-icon-64.png" alt="" width="36" height="36">
+          <div class="min-w-0">
+            <div class="brand-title-row">
+              <h1 class="brand-heading">Observatório Macroeconômico</h1>
+            </div>
+            <p class="brand-subtext">Systekna Governo • Contas públicas do Brasil</p>
           </div>
         </div>
+      </div>
 
-        <!-- Ações Globais do Header -->
-        <div class="header-actions">
-          <button class="btn btn-primary" id="btnSyncAPI" title="Buscar os números mais recentes no Banco Central, IBGE e Tesouro Nacional">
-            <span id="iconSync" data-icon="refresh"></span>
-            Atualizar dados
+      <div class="topbar-controls-section">
+        <div class="topbar-actions-wrap">
+          <button type="button" class="action-btn action-btn-secondary" id="btnInstallApp" title="Instalar como app" hidden>
+            <span data-stk-icon="download"></span>
+            <span class="action-btn-text">Instalar</span>
           </button>
-          <button class="btn btn-secondary" data-action="export-csv" title="Baixar todos os números em planilha (CSV)">
-            <span data-icon="fileSpreadsheet"></span>
-            Baixar planilha
+          <button type="button" class="action-btn action-btn-secondary" id="btnSyncAPI" title="Buscar os números mais recentes no Banco Central, IBGE e Tesouro Nacional">
+            <span id="iconSync" data-stk-icon="refresh"></span>
+            <span class="action-btn-text">Atualizar</span>
           </button>
-          <button class="btn btn-secondary" data-action="copy-report" title="Copiar um resumo em texto">
-            <span data-icon="copy"></span>
-            Copiar resumo
+          <button type="button" class="action-btn action-btn-secondary" data-action="export-csv" title="Baixar todos os números em planilha (CSV)">
+            <span data-stk-icon="fileCsv"></span>
+            <span class="action-btn-text">CSV</span>
           </button>
-          <button class="btn btn-whatsapp" data-action="share-whatsapp" title="Enviar o resumo pelo WhatsApp">
-            <span data-icon="whatsapp"></span>
-            WhatsApp
-          </button>
+          <div class="action-menu">
+            <button type="button" class="action-btn action-btn-primary" aria-haspopup="menu" aria-expanded="false" title="Compartilhar">
+              <span data-stk-icon="share"></span>
+              <span class="action-btn-text">Compartilhar</span>
+            </button>
+            <div class="action-menu-list" role="menu">
+              <button type="button" class="action-menu-item" role="menuitem" data-action="share-whatsapp"><span data-stk-icon="whatsapp"></span>Enviar resumo pelo WhatsApp</button>
+              <button type="button" class="action-menu-item" role="menuitem" data-action="copy-report"><span data-stk-icon="copy"></span>Copiar resumo</button>
+              <button type="button" class="action-menu-item" role="menuitem" data-action="copy-link"><span data-stk-icon="link"></span>Copiar link deste cenário</button>
+            </div>
+          </div>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <div class="app-body">
-    <!-- NAVEGAÇÃO: BARRA LATERAL (desktop fixa, tablet trilho de ícones, celular gaveta) -->
-    <aside class="side-nav" id="sideNav" aria-label="Navegação principal">
-      <div class="side-nav-head">
-        <span class="side-nav-title">Navegação</span>
-        <button type="button" class="nav-close" id="btnNavClose" aria-label="Fechar menu de navegação">
-          <span data-icon="x"></span>
-        </button>
+  <!-- BARRA LATERAL + CONTEÚDO -->
+  <div class="app-main-layout">
+    <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+
+    <aside class="app-sidebar" id="appSidebar" aria-label="Navegação principal">
+      <div class="sidebar-top-section">
+        <div class="sidebar-drawer-header">
+          <div class="sidebar-drawer-brand">
+            <img class="app-logo app-logo-sm" src="icons/app-icon-64.png" alt="" width="24" height="24">
+            <span>Calculadora</span>
+          </div>
+          <button type="button" class="btn-sidebar-close" id="btnCloseSidebar" aria-label="Fechar menu" title="Fechar menu">
+            <span data-stk-icon="close"></span>
+          </button>
+        </div>
+        <div class="sidebar-desktop-header">
+          <span class="sidebar-title-text">Análises</span>
+        </div>
+        <nav class="sidebar-nav-list" role="tablist" aria-orientation="vertical" aria-label="Análises">
+          <button type="button" class="sidebar-nav-item active" data-tab="tabAPIs" role="tab" id="btnTabAPIs" aria-selected="true" aria-controls="tabAPIs" title="Painel da economia">
+            <span class="nav-item-inner">
+              <span class="nav-icon"><span data-stk-icon="network"></span></span>
+              <span class="nav-label">Painel da economia</span>
+            </span>
+          </button>
+          <button type="button" class="sidebar-nav-item" data-tab="tabFiscal" role="tab" id="btnTabFiscal" aria-selected="false" aria-controls="tabFiscal" tabindex="-1" title="Simulador da dívida">
+            <span class="nav-item-inner">
+              <span class="nav-icon"><span data-stk-icon="chartLine"></span></span>
+              <span class="nav-label">Simulador da dívida</span>
+            </span>
+          </button>
+        </nav>
       </div>
-      <div class="side-nav-list" role="tablist" aria-orientation="vertical">
-        <button class="tab-btn active" data-tab-target="tabAPIs" role="tab" id="btnTabAPIs" aria-selected="true" aria-controls="tabAPIs" title="Painel da economia">
-          <span data-icon="network"></span>
-          <span class="tab-label">Painel da economia</span>
-        </button>
-        <button class="tab-btn" data-tab-target="tabFiscal" role="tab" id="btnTabFiscal" aria-selected="false" aria-controls="tabFiscal" tabindex="-1" title="Simulador da dívida">
-          <span data-icon="chartLine"></span>
-          <span class="tab-label">Simulador da dívida</span>
-        </button>
-      </div>
-      <!-- Recolher e expandir a barra (desktop e tablet; no celular ela é gaveta) -->
-      <button type="button" class="nav-collapse" id="btnNavCollapse" aria-controls="sideNav" aria-expanded="true" aria-label="Recolher menu de navegação" title="Recolher menu de navegação">
-        <span data-icon="chevronsLeft"></span>
-        <span class="tab-label">Recolher menu</span>
-      </button>
     </aside>
-    <div class="nav-backdrop" id="navBackdrop" hidden></div>
 
-    <!-- CONTEÚDO PRINCIPAL (ABAS) -->
+    <div class="app-content-area">
     <main class="main-content">
       <div class="content-wrapper">
 
@@ -273,7 +303,7 @@
               </div>
 
               <div class="table-responsive">
-                <table class="sensibility-table">
+                <table class="sensibility-table tabela-cards">
                   <thead>
                     <tr>
                       <th>Item</th>
@@ -305,7 +335,7 @@
             </div>
 
             <div class="table-responsive">
-              <table class="sensibility-table">
+              <table class="sensibility-table tabela-cards">
                 <thead>
                   <tr>
                     <th>Selic</th>
@@ -510,10 +540,9 @@
 
       </div>
     </main>
-    </div>
 
-    <!-- RODAPÉ GOVERNAMENTAL -->
-    <footer class="gov-footer">
+    <!-- RODAPÉ -->
+    <footer class="app-footer gov-footer">
       <!-- REFERÊNCIAS E FONTES -->
       <section class="content-wrapper footer-fontes" aria-labelledby="tituloFontes">
         <h2 id="tituloFontes" class="footer-fontes-titulo">
@@ -572,15 +601,28 @@
         </div>
       </div>
     </footer>
+    </div>
   </div>
 
-  <!-- TOAST NOTIFICATIONS (Substituição a alerts) -->
-  <div class="toast-container" id="toastNotification" role="alert" aria-live="assertive">
-    <div class="toast-icon" data-icon="checkCircle"></div>
+  <!-- CELULAR: barra de abas fixa embaixo -->
+  <nav class="app-bottom-nav" id="appBottomNav" aria-label="Navegação principal">
+    <button type="button" class="bottom-nav-item active" data-tab="tabAPIs" aria-current="page">
+      <span><span data-stk-icon="network"></span></span>
+      <span class="bottom-nav-label">Economia</span>
+    </button>
+    <button type="button" class="bottom-nav-item" data-tab="tabFiscal">
+      <span><span data-stk-icon="chartLine"></span></span>
+      <span class="bottom-nav-label">Simulador</span>
+    </button>
+  </nav>
+
+  <!-- AVISO -->
+  <div class="stk-toast" id="toastNotification" role="status" aria-live="polite">
+    <div class="toast-icon" data-stk-icon="checkCircle"></div>
     <div id="toastMessage">Operação realizada com sucesso.</div>
   </div>
 
   <!-- ENTRYPOINT DA APLICAÇÃO (ES6 MODULE) -->
-  <script type="module" src="src/program.js?v=20261028-1814"></script>
+  <script type="module" src="src/program.js?v=20261028-1820"></script>
 </body>
 </html>

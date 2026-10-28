@@ -1,10 +1,10 @@
-import { MacroState } from '../domain/MacroState.js?v=20261028-1814';
-import { FisherModel } from '../domain/FisherModel.js?v=20261028-1814';
-import { DebtTrajectoryModel } from '../domain/DebtTrajectoryModel.js?v=20261028-1814';
-import { SensibilityMatrixModel } from '../domain/SensibilityMatrixModel.js?v=20261028-1814';
-import { PublicFinanceModel } from '../domain/PublicFinanceModel.js?v=20261028-1814';
-import { UnionBudgetModel } from '../domain/UnionBudgetModel.js?v=20261028-1814';
-import { CsvExporter } from '../infrastructure/CsvExporter.js?v=20261028-1814';
+import { MacroState } from '../domain/MacroState.js?v=20261028-1820';
+import { FisherModel } from '../domain/FisherModel.js?v=20261028-1820';
+import { DebtTrajectoryModel } from '../domain/DebtTrajectoryModel.js?v=20261028-1820';
+import { SensibilityMatrixModel } from '../domain/SensibilityMatrixModel.js?v=20261028-1820';
+import { PublicFinanceModel } from '../domain/PublicFinanceModel.js?v=20261028-1820';
+import { UnionBudgetModel } from '../domain/UnionBudgetModel.js?v=20261028-1820';
+import { CsvExporter } from '../infrastructure/CsvExporter.js?v=20261028-1820';
 
 /**
  * Camada de Aplicação: MacroObservatoryService
@@ -13,13 +13,14 @@ import { CsvExporter } from '../infrastructure/CsvExporter.js?v=20261028-1814';
 export class MacroObservatoryService {
   /**
    * @param {Object} dependencies
-   * @param {import('../infrastructure/GovApiGateway.js?v=20261028-1814').GovApiGateway} dependencies.apiGateway
+   * @param {import('../infrastructure/GovApiGateway.js?v=20261028-1820').GovApiGateway} dependencies.apiGateway
    * @param {MacroState} [dependencies.initialState]
-   * @param {import('../infrastructure/LocalSnapshotStore.js?v=20261028-1814').LocalSnapshotStore} [dependencies.cache] Última consulta salva no aparelho
+   * @param {import('../infrastructure/LocalSnapshotStore.js?v=20261028-1820').LocalSnapshotStore} [dependencies.cache] Última consulta salva no aparelho
    */
   constructor({ apiGateway, initialState = null, cache = null } = {}) {
     this.apiGateway = apiGateway;
     this.cache = cache;
+    this.ignorados = [];
     this.state = initialState || MacroState.createDefault();
     this.listeners = new Set();
   }
@@ -43,6 +44,7 @@ export class MacroObservatoryService {
   async syncOfficialFeeds() {
     if (!this.apiGateway) return;
     const result = await this.apiGateway.syncAll();
+    this.ignorados = result.ignorados || [];
 
     const changes = {
       lastSync: MacroObservatoryService.momento(new Date()),
@@ -139,11 +141,16 @@ export class MacroObservatoryService {
     return Object.values(this.state.fontes).filter(f => f.aoVivo).length;
   }
 
+  /** Indicadores que não se atualizam por aqui (Tesouro no navegador): ficam com a referência gerada por script */
+  indicadoresIgnorados() {
+    return this.ignorados;
+  }
+
   /**
    * Total de indicadores que a sincronização consegue trazer ao vivo
    */
   totalSincronizavel() {
-    return MacroObservatoryService.FEEDS.length;
+    return MacroObservatoryService.FEEDS.filter(([origem]) => !this.ignorados.includes(origem)).length;
   }
 
   /**

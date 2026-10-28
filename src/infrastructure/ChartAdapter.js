@@ -237,7 +237,15 @@ export class ChartAdapter {
             grid: { color: '#333333' }
           },
           y: {
-            ticks: { color: '#D6D6D6', font: { family: 'Inter', size: 11 } },
+            ticks: {
+              color: '#D6D6D6',
+              font: { family: 'Inter', size: 11 },
+              // Em tela estreita, nomes longos encurtam; o tooltip mostra o nome inteiro
+              callback(valor) {
+                const rotulo = this.getLabelForValue(valor);
+                return this.chart.width < 480 && rotulo.length > 18 ? `${rotulo.slice(0, 17)}…` : rotulo;
+              }
+            },
             grid: { display: false }
           }
         }

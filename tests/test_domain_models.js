@@ -157,6 +157,10 @@ assert(service.state.fontes.despesas.periodo === 'set/2025–ago/2026' && servic
 assert(urls.some(u => u.includes('bcdata.sgs.13761/')) && urls.some(u => u.includes('bcdata.sgs.4382/')), 'Dívida em R$ (SGS 13761) e PIB 12 meses (SGS 4382) são consultados');
 assertCloseTo(service.state.dbggTri, 4.58 / 1e6, 1e-9, 'Valor do SGS 13761 em R$ milhões vira R$ Tri');
 assert(service.state.fontes.eleitores.aoVivo === false, 'Eleitorado continua como referência do TSE (não há API ao vivo)');
+const urlsAntes = urls.length;
+const semTesouro = new MacroObservatoryService({ apiGateway: new GovApiGateway({ incluirTesouro: false }) });
+await semTesouro.syncOfficialFeeds();
+assert(!urls.slice(urlsAntes).some(u => u.includes('siconfi')) && semTesouro.totalSincronizavel() === 6 && semTesouro.contarAoVivo() === 6, 'No navegador o Tesouro não é consultado nem contado (6 de 6)');
 globalThis.fetch = async () => { throw new Error('offline'); };
 const offline = new MacroObservatoryService({ apiGateway: new GovApiGateway() });
 await offline.syncOfficialFeeds();
