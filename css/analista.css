@@ -1,0 +1,316 @@
+/*
+ * Visão do analista: base de cálculo (habitante × eleitor), gastos públicos e gráfico do painel.
+ * Fica fora do style.css porque ele é idêntico ao do 8.3. PRESSAO-CIVICA.
+ */
+
+/* ───────── SELETOR DA BASE DE CÁLCULO ───────── */
+.base-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.base-bar .base-label {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.base-bar .base-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.base-bar .preset-buttons {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.btn-preset:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ───────── GASTOS PÚBLICOS: GRÁFICO + TABELA ───────── */
+/* Gráfico em cima, tabela embaixo: a tabela tem 5 colunas e não cabe ao lado do gráfico */
+.analista-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.chart-bars-container {
+  position: relative;
+  width: 100%;
+  height: 400px; /* 13 barras: imposto, total e 11 grupos de gasto */
+}
+
+.chart-caption {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+.sensibility-table tfoot td {
+  border-top: 1px solid var(--border-default);
+  font-weight: 600;
+}
+
+.sensibility-table .row-group td {
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ───────── RESULTADO DA SIMULAÇÃO POR BASE ───────── */
+.sim-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.sim-results-grid .macro-kpi-card .kpi-value {
+  font-size: 1.125rem;
+}
+
+/* ───────── NAVEGAÇÃO EM BARRA LATERAL ─────────
+ * ≥ 640px: barra fixa; o botão de menu do topo alterna entre
+ *   expandida (ícone e nome) e trilho (só ícones, nome no title).
+ *   Padrão: expandida a partir de 1100px, trilho no tablet.
+ * < 640px: gaveta que abre pelo botão de menu do topo
+ */
+.app-body {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+}
+
+.app-body .main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.side-nav {
+  flex: 0 0 248px;
+  position: sticky;
+  top: var(--header-h, 64px);
+  align-self: flex-start;
+  height: calc(100vh - var(--header-h, 64px));
+  overflow-y: auto;
+  padding: 16px 10px;
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border-subtle);
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Botão de recolher no pé da barra: some no celular (lá a barra é gaveta) */
+.nav-collapse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.nav-collapse:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-collapse:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.nav-collapse .icon-svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.side-nav-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 10px;
+}
+
+.side-nav-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.side-nav-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.side-nav .tab-btn {
+  width: 100%;
+  height: auto;
+  min-height: 40px;
+  padding: 8px 12px;
+  gap: 10px;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.side-nav .tab-btn .icon-svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.side-nav .tab-btn.active {
+  box-shadow: var(--elevation-low), inset 3px 0 0 var(--br-green-text);
+}
+
+.side-nav .tab-btn:focus-visible,
+.nav-toggle:focus-visible,
+.nav-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Botão de menu: recolhe e expande a barra (gaveta no celular). Fechar: só no celular */
+.nav-toggle,
+.nav-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.nav-toggle:hover,
+.nav-close:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-close { display: none; }
+
+.nav-backdrop { display: none; }
+
+/* Trilho de ícones: barra recolhida (padrão no tablet) */
+@media (min-width: 640px) {
+  .side-nav {
+    transition: flex-basis 0.2s cubic-bezier(0.1, 0.9, 0.2, 1), padding 0.2s ease;
+  }
+  .side-nav.rail {
+    flex-basis: 68px;
+    padding: 16px 8px;
+  }
+  .side-nav.rail .side-nav-head { display: none; }
+  .side-nav.rail .tab-btn {
+    justify-content: center;
+    padding: 10px 0;
+    min-height: 44px;
+  }
+  .side-nav.rail .tab-btn .icon-svg {
+    width: 20px;
+    height: 20px;
+  }
+  .side-nav.rail .tab-label,
+  .side-nav.rail .nav-collapse .tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .side-nav.rail .nav-collapse {
+    justify-content: center;
+    padding: 10px 0;
+  }
+  .side-nav.rail .nav-collapse .icon-svg { transform: rotate(180deg); }
+  .side-nav.rail .tab-btn.active {
+    box-shadow: var(--elevation-low), inset 0 -2px 0 var(--br-green-text);
+  }
+}
+
+/* Celular: gaveta sobreposta */
+@media (max-width: 639px) {
+  .nav-close { display: inline-flex; }
+  .nav-collapse { display: none; }
+
+  .side-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 70;
+    width: min(288px, 85vw);
+    height: 100vh;
+    height: 100dvh;
+    padding: calc(12px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom));
+    background: rgba(24, 24, 24, 0.92);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.5);
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.1, 0.9, 0.2, 1);
+    will-change: transform;
+  }
+
+  .side-nav.open {
+    transform: translateX(0);
+  }
+
+  .side-nav .tab-btn { min-height: 48px; font-size: 0.875rem; }
+
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    background: rgba(0, 0, 0, 0.55);
+  }
+  .nav-backdrop[hidden] { display: none; }
+
+  body.nav-aberta { overflow: hidden; }
+
+  /* Selos longos dos painéis quebram linha em vez de vazar a tela */
+  .panel-header > div { min-width: 0; }
+  .panel-header .badge-status {
+    white-space: normal;
+    max-width: 100%;
+    height: auto;
+    line-height: 1.35;
+  }
+}
+
+/* Com a barra lateral, o topo vai de ponta a ponta e o conteúdo aproveita o espaço que a barra libera ao recolher */
+.main-header .content-wrapper { max-width: none; }
+.app-body .content-wrapper { max-width: 1680px; }

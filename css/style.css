@@ -1,0 +1,977 @@
+@charset "UTF-8";
+@import url('fonts.css');
+
+/* ==========================================================================
+   STK-GOVERNO-BRAZIL — FLUENT-SPECTRUM MINIMALIST DESIGN SYSTEM
+   Mesmo sistema do Painel Eleições 2026 (8.1. ELEICOES/css/style.css):
+   Microsoft Fluent 2 (Mica/Acrylic) & Adobe Spectrum, grid de 8pt, cores do Brasil.
+   Compartilhado por 8.2. CALCULADORA e 8.3. PRESSAO-CIVICA (arquivos idênticos).
+   ========================================================================== */
+
+/* ───────── 1. DESIGN TOKENS (MICROSOFT FLUENT 2 / ADOBE SPECTRUM) ───────── */
+:root {
+  /* Cores da bandeira do Brasil */
+  --br-green: #009C3B;
+  --br-green-text: #3DD68C;
+  --br-yellow: #FFDF00;
+  --br-yellow-text: #FFD43B;
+  --br-blue: #002776;
+  --br-blue-text: #6C9CFF;
+
+  /* Neutros no estilo Fluent 2 (tema escuro) */
+  --bg: #141414;
+  --surface: #1F1F1F;
+  --surface-2: #292929;
+  --line: #333333;
+
+  --bg-canvas: var(--bg);
+  --bg-subtle: #181818;
+  --surface-elevated: #2B2B2B;
+  --surface-inset: #181818;
+
+  --border-subtle: #303030;
+  --border-default: #3D3D3D;
+  --border-hover: #575757;
+
+  /* Acento e status */
+  --accent: var(--br-green-text);
+  --accent-brand: var(--br-green);
+  --accent-brand-hover: #00B347;
+  --accent-purple: #B794F6;
+  --up: #3DD68C;
+  --down: #F1707B;
+  --warn: var(--br-yellow-text);
+  --info: #5CC8F0;
+  --gold: var(--br-yellow-text);
+
+  /* Texto */
+  --text-primary: #FFFFFF;
+  --text-secondary: #ADADAD;
+  --text-tertiary: #8A8A8A;
+  --text-disabled: #5C5C5C;
+
+  /* Nomes usados pelos componentes destas calculadoras */
+  --text: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --text-subtle: var(--text-tertiary);
+  --bg-deep: var(--surface-inset);
+
+  --sans: "Segoe UI Variable Text", "Segoe UI", 'Inter', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  --mono: 'IBM Plex Mono', Menlo, Consolas, monospace;
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+
+  /* Raios Fluent */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Elevação natural (sem borrões pesados) */
+  --elevation-low: 0 0 2px rgba(0, 0, 0, 0.24), 0 1px 2px rgba(0, 0, 0, 0.28);
+  --elevation-card: 0 0 2px rgba(0, 0, 0, 0.24), 0 2px 4px rgba(0, 0, 0, 0.28);
+  --elevation-hover: 0 0 2px rgba(0, 0, 0, 0.24), 0 8px 16px rgba(0, 0, 0, 0.28);
+  --elevation-dropdown: 0 0 8px rgba(0, 0, 0, 0.24), 0 32px 64px rgba(0, 0, 0, 0.28);
+
+  --transition-fast: 0.1s cubic-bezier(0.33, 0, 0.67, 1);
+  --transition-normal: 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+/* ───────── 2. RESET & BASE ───────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+}
+
+body {
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  font-feature-settings: "cv11", "ss01";
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(1000px 420px at 0% -8%, rgba(0, 156, 59, 0.10), transparent 60%),
+    radial-gradient(800px 360px at 100% -6%, rgba(255, 223, 0, 0.05), transparent 60%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+h1, h2, h3, h4, .font-title {
+  font-family: var(--sans);
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Números tabulares: IBM Plex Mono como no Painel Eleições */
+.font-mono, .code-text, .tabular-nums {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4A4A4A; border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: #6A6A6A; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ───────── 3. LAYOUT ───────── */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content-wrapper {
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .content-wrapper { padding: 0 24px; }
+}
+
+/* ───────── 4. BARRA SUPERIOR (APP TOPBAR FLUENT) ───────── */
+.main-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(28, 28, 28, 0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  padding: 10px 0;
+  transform: translateZ(0);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 360px;
+}
+
+.brand-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(0, 156, 59, 0.28) 0%, rgba(255, 223, 0, 0.12) 100%);
+  border: 1px solid rgba(61, 214, 140, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--br-green-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.brand-titles { min-width: 0; }
+
+.brand-titles h1 {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Botões à direita do título; quando não cabem, descem de linha e seguem alinhados à direita */
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+  margin-left: auto;
+}
+
+/* ───────── 5. BADGES DE STATUS ───────── */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  border: 1px solid transparent;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.badge-status.idle {
+  background: rgba(255, 223, 0, 0.14);
+  color: var(--br-yellow-text);
+  border-color: rgba(255, 212, 59, 0.4);
+}
+
+.badge-status.active {
+  background: rgba(0, 156, 59, 0.2);
+  color: var(--br-green-text);
+  border-color: rgba(61, 214, 140, 0.35);
+}
+
+.badge-status.syncing {
+  background: rgba(108, 156, 255, 0.14);
+  color: var(--br-blue-text);
+  border-color: rgba(108, 156, 255, 0.38);
+}
+
+.badge-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ───────── 6. BOTÕES FLUENT ───────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Primário: verde-Brasil sólido */
+.btn-primary {
+  background: var(--accent-brand);
+  color: #FFFFFF;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-brand-hover);
+}
+.btn-primary:active:not(:disabled) {
+  background: #008533;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-hover);
+}
+
+.btn-whatsapp {
+  background: rgba(37, 211, 102, 0.1);
+  border-color: rgba(37, 211, 102, 0.35);
+  color: #4ADE80;
+}
+.btn-whatsapp:hover:not(:disabled) {
+  background: rgba(37, 211, 102, 0.2);
+  border-color: rgba(37, 211, 102, 0.6);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ───────── 7. BOTÕES DE ABA (posicionados pela barra lateral em analista.css) ───────── */
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  background: var(--surface-elevated);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+  box-shadow: var(--elevation-low), inset 0 -2px 0 var(--br-green-text);
+}
+
+.tab-btn.active .icon-svg { color: var(--br-green-text); }
+
+/* ───────── 8. CONTEÚDO ───────── */
+.main-content {
+  flex: 1;
+  padding: 24px 0 48px 0;
+}
+
+.tab-pane {
+  display: none;
+  animation: fadeIn 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.tab-pane.active {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ───────── 9. CARTÕES SÓLIDOS (MICA): SEM DESFOQUE, BORDA FINA, SOMBRA CURTA ───────── */
+.glass-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-card);
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 20px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.glass-panel:hover { border-color: var(--border-default); }
+
+.panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+/* Título ocupa o espaço; o selo desce de linha quando falta largura (ex.: barra lateral expandida) */
+.panel-header > div:not(.panel-header-badge) {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.panel-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel-header p {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.panel-header-badge {
+  font-family: var(--sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* ───────── 10. FEEDS DAS APIS ───────── */
+/* No máximo 4 cards por linha (7 cards ficam 4 + 3, sem card órfão) */
+.feeds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(240px, calc(25% - 9px)), 1fr));
+  gap: 12px;
+}
+
+.feed-card {
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.feed-card:hover {
+  border-color: var(--border-default);
+  background: #1C1C1C;
+}
+
+.feed-meta .feed-tag {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  font-family: var(--mono);
+  display: block;
+}
+
+.feed-meta strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+  margin: 2px 0;
+}
+
+.feed-meta .feed-status {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.feed-value {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-value .num {
+  font-size: 1.2rem;
+  font-weight: 600;
+  display: block;
+}
+
+.feed-value .unit {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+/* ───────── 11. CARTÕES DE MÉTRICAS (ACENTO LATERAL COMO NO PAINEL ELEIÇÕES) ───────── */
+.macro-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.macro-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 16px 16px 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--elevation-card);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.macro-kpi-card:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--elevation-hover);
+}
+
+.macro-kpi-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--br-green-text);
+}
+
+.macro-kpi-card:nth-child(4n+2)::before { background: var(--br-yellow-text); }
+.macro-kpi-card:nth-child(4n+3)::before { background: var(--br-blue-text); }
+.macro-kpi-card:nth-child(4n+4)::before { background: var(--accent-purple); }
+
+.macro-kpi-card .kpi-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: block;
+}
+
+.macro-kpi-card .kpi-value {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 4px 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.macro-kpi-card .kpi-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  display: block;
+}
+
+/* ───────── 12. TABELA ESTILO AZURE / POWER BI ───────── */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-inset);
+}
+
+.sensibility-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sensibility-table th {
+  background: #232323;
+  color: #D6D6D6;
+  font-family: var(--sans);
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.sensibility-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sensibility-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.012); }
+.sensibility-table tbody tr:hover { background: #262626; }
+
+.sensibility-table tr.baseline-row {
+  background: rgba(0, 156, 59, 0.14);
+  font-weight: 600;
+}
+
+.sensibility-table tr.baseline-row td {
+  border-top: 1px solid rgba(61, 214, 140, 0.45);
+  border-bottom: 1px solid rgba(61, 214, 140, 0.45);
+}
+
+.sensibility-table tr.baseline-row td:first-child { box-shadow: inset 3px 0 0 var(--br-green-text); }
+
+/* ───────── 13. CONTROLES DE SIMULAÇÃO (SPECTRUM SLIDER) ───────── */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 992px) {
+  .two-column-layout {
+    grid-template-columns: 4.8fr 7.2fr;
+  }
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8125rem;
+}
+
+.control-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.control-val {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--br-green-text);
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #4A4A4A;
+  border-radius: var(--radius-full);
+  outline: none;
+  border: none;
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--br-green-text);
+  border: 4px solid var(--surface-elevated);
+  box-shadow: 0 0 0 1px var(--border-hover);
+  cursor: pointer;
+  transition: border-width 0.1s ease;
+}
+
+input[type=range]::-webkit-slider-thumb:hover { border-width: 3px; }
+input[type=range]:active::-webkit-slider-thumb { border-width: 5px; }
+
+input[type=range]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--br-green-text);
+  border: 4px solid var(--surface-elevated);
+  box-shadow: 0 0 0 1px var(--border-hover);
+  cursor: pointer;
+}
+
+input[type=range]::-moz-range-progress {
+  height: 4px;
+  background: var(--br-green-text);
+  border-radius: var(--radius-full);
+}
+
+input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+.control-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  font-family: var(--mono);
+}
+
+/* ───────── 14. GRÁFICOS ───────── */
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 240px;
+}
+
+.chart-doughnut-container {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ───────── 15. PRESETS (SPECTRUM TAG / CHIPS) ───────── */
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.btn-preset {
+  height: 28px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: #D6D6D6;
+  border-radius: var(--radius-full);
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-preset:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+  color: #FFFFFF;
+}
+
+.btn-preset.highlight {
+  background: rgba(255, 223, 0, 0.14);
+  border-color: var(--br-yellow);
+  color: var(--br-yellow-text);
+  font-weight: 600;
+}
+
+/* ───────── 16. BARRA DE PROGRESSO (LIMIAR DE CHENOWETH) ───────── */
+.progress-bar-container {
+  width: 100%;
+  height: 10px;
+  background: var(--surface-inset);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  position: relative;
+  margin: 8px 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--br-blue-text) 0%, var(--br-yellow-text) 50%, var(--br-green-text) 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.progress-target-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: var(--down);
+  z-index: 2;
+}
+
+/* ───────── 18. TOAST (FLUENT TOAST) ───────── */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--br-green-text);
+  color: var(--text-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-dropdown);
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transform: translateY(100px);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.toast-container.show {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.toast-icon {
+  color: var(--br-green-text);
+  display: flex;
+  align-items: center;
+}
+
+/* ───────── 19. RODAPÉ (FAIXA COM AS CORES DO BRASIL) ───────── */
+.gov-footer {
+  position: relative;
+  background: #181818;
+  border-top: 1px solid var(--border-subtle);
+  padding: 20px 0;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.gov-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--br-green) 0 50%, var(--br-yellow) 50% 75%, var(--br-blue) 75% 100%);
+  opacity: 0.8;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Referências e fontes: acima da linha de autoria */
+.footer-fontes {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.footer-fontes-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.footer-fontes-titulo .icon-svg {
+  width: 16px;
+  height: 16px;
+  color: var(--br-green-text);
+}
+
+.footer-fontes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 32px;
+}
+
+.footer-fontes h3 {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.footer-fontes ul {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.55;
+}
+
+.footer-fontes a {
+  color: var(--br-green-text);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.2);
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.footer-fontes a:hover { text-decoration-color: currentColor; }
+
+.footer-fontes a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ───────── 20. UTILITÁRIOS DE COR ───────── */
+.text-accent { color: var(--accent) !important; }
+.text-up { color: var(--up) !important; }
+.text-down { color: var(--down) !important; }
+.text-warn { color: var(--warn) !important; }
+.text-info { color: var(--info) !important; }
+.text-gold { color: var(--gold) !important; }
+.text-white { color: #FFFFFF !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+
+/* ───────── 21. ÍCONES SVG (LUCIDE) ───────── */
+.icon-svg {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.icon-svg-lg {
+  width: 1.35em;
+  height: 1.35em;
+}
+.icon-spin {
+  animation: spinSvg 1s linear infinite;
+}
+@keyframes spinSvg {
+  100% { transform: rotate(360deg); }
+}
+
+/* ───────── 22. CELULAR (ATÉ 639PX) ───────── */
+@media (max-width: 639px) {
+  html { -webkit-tap-highlight-color: transparent; }
+  .main-header {
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+  .header-actions { width: 100%; }
+  .header-actions .btn { flex: 1 1 auto; }
+  .glass-panel { padding: 16px; }
+  .panel-header { flex-wrap: wrap; }
+  .toast-container { left: 16px; right: 16px; bottom: 16px; }
+}
+
+/* Movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

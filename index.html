@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1C1C1C">
+  <meta name="description" content="Observatório Fiscal & Macroeconômico do Brasil: Selic, impostos, dívida bruta em R$ e % do PIB, gastos públicos e simulação por habitante (IBGE) ou por eleitor (TSE).">
+  <title>Observatório Fiscal & Macroeconômico do Brasil: Conector de APIs Oficiais & Simulador</title>
+
+  <!-- Favicon SVG Inline -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233DD68C' stroke-width='2'><path d='M4 10a7.5 7.5 0 0 0 10 10'/><path d='M4 14a3.5 3.5 0 0 0 4 4'/><circle cx='4' cy='20' r='1'/></svg>">
+
+  <!-- Design System Canônico & Estilos Locais -->
+  <link rel="stylesheet" href="css/style.css?v=20261028d">
+  <link rel="stylesheet" href="css/analista.css?v=20261028d">
+  
+  <!-- Biblioteca Vendored Local-First para Gráficos -->
+  <script src="vendor/chart.js/chart.umd.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- BARRA SUPERIOR / HEADER GLOBAL -->
+    <header class="main-header">
+      <div class="content-wrapper header-content">
+        <!-- Marca & Status das APIs -->
+        <div class="brand-section">
+          <button type="button" class="nav-toggle" id="btnNavToggle" aria-controls="sideNav" aria-expanded="false" aria-label="Abrir menu de navegação">
+            <span data-icon="menu"></span>
+          </button>
+          <div class="brand-icon-box" data-icon="satellite" aria-hidden="true"></div>
+          <div class="brand-titles">
+            <h1>
+              Observatório Macroeconômico do Brasil
+            </h1>
+          </div>
+        </div>
+
+        <!-- Ações Globais do Header -->
+        <div class="header-actions">
+          <button class="btn btn-primary" id="btnSyncAPI" title="Consultar webservices do Banco Central e IBGE">
+            <span id="iconSync" data-icon="refresh"></span>
+            Sincronizar APIs Oficiais
+          </button>
+          <button class="btn btn-secondary" data-action="export-csv" title="Exportar dados completos em formato CSV">
+            <span data-icon="fileSpreadsheet"></span>
+            Exportar CSV
+          </button>
+          <button class="btn btn-secondary" data-action="copy-report" title="Copiar o relatório consolidado para a área de transferência">
+            <span data-icon="copy"></span>
+            Copiar Relatório
+          </button>
+          <button class="btn btn-whatsapp" data-action="share-whatsapp" title="Compartilhar relatório consolidado via WhatsApp">
+            <span data-icon="whatsapp"></span>
+            WhatsApp
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-body">
+    <!-- NAVEGAÇÃO: BARRA LATERAL (desktop fixa, tablet trilho de ícones, celular gaveta) -->
+    <aside class="side-nav" id="sideNav" aria-label="Navegação principal">
+      <div class="side-nav-head">
+        <span class="side-nav-title">Navegação</span>
+        <button type="button" class="nav-close" id="btnNavClose" aria-label="Fechar menu de navegação">
+          <span data-icon="x"></span>
+        </button>
+      </div>
+      <div class="side-nav-list" role="tablist" aria-orientation="vertical">
+        <button class="tab-btn active" data-tab-target="tabAPIs" role="tab" id="btnTabAPIs" aria-selected="true" aria-controls="tabAPIs" title="Painel Macro & Conector de APIs">
+          <span data-icon="network"></span>
+          <span class="tab-label">Painel Macro & Conector de APIs</span>
+        </button>
+        <button class="tab-btn" data-tab-target="tabFiscal" role="tab" id="btnTabFiscal" aria-selected="false" aria-controls="tabFiscal" tabindex="-1" title="Simulador Fiscal & Trajetória da Dívida">
+          <span data-icon="chartLine"></span>
+          <span class="tab-label">Simulador Fiscal & Trajetória da Dívida</span>
+        </button>
+      </div>
+      <!-- Recolher e expandir a barra (desktop e tablet; no celular ela é gaveta) -->
+      <button type="button" class="nav-collapse" id="btnNavCollapse" aria-controls="sideNav" aria-expanded="true" aria-label="Recolher menu de navegação" title="Recolher menu de navegação">
+        <span data-icon="chevronsLeft"></span>
+        <span class="tab-label">Recolher menu</span>
+      </button>
+    </aside>
+    <div class="nav-backdrop" id="navBackdrop" hidden></div>
+
+    <!-- CONTEÚDO PRINCIPAL (ABAS) -->
+    <main class="main-content">
+      <div class="content-wrapper">
+
+        <!-- ABA 1: PAINEL MACRO & CONECTOR DE APIS -->
+        <div class="tab-pane active" id="tabAPIs" role="tabpanel" aria-labelledby="btnTabAPIs">
+          <section class="glass-panel base-bar" aria-label="Base de cálculo">
+            <div>
+              <span class="base-label">Base de cálculo dos valores por pessoa</span><br>
+              <span class="base-hint">Divide os totais pela população (IBGE) ou pelo eleitorado (TSE) mostrados nos cards abaixo.</span>
+            </div>
+            <div class="preset-buttons" role="group" aria-label="Escolher base de cálculo">
+              <button type="button" class="btn-preset highlight" data-base="populacao" aria-pressed="true">Por habitante</button>
+              <button type="button" class="btn-preset" data-base="eleitores" aria-pressed="false">Por eleitor</button>
+            </div>
+          </section>
+
+          <!-- STATUS DAS CONEXÕES OFICIAIS -->
+          <section class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <span class="badge-status active">Feeds Públicos em Aberto • CORS Aware & Fallback Ativo</span>
+                <h2 style="margin-top: 0.35rem;">Conexões com os Repositórios Oficiais do Estado</h2>
+                <p>Consulta REST direta aos webservices públicos do Banco Central do Brasil (SGS), do IBGE e do Tesouro Nacional (SICONFI).</p>
+              </div>
+              <div class="panel-header-badge">
+                Última Checagem: <strong class="text-white" id="lblLastSyncTime">Nunca (Usando Referência)</strong>
+              </div>
+            </div>
+
+            <div class="feeds-grid">
+              <!-- Selic Meta -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag">BCB SGS Série 432</span>
+                  <strong>Taxa Meta Selic</strong>
+                  <span class="feed-status" id="syncStatusSelic">Referência · out/2026</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-warn" id="feedValSelic">13,75%</span>
+                  <span class="unit">a.a.</span>
+                </div>
+              </div>
+
+              <!-- IPCA 12m -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag">BCB SGS Série 13522</span>
+                  <strong>IPCA Acumulado 12m</strong>
+                  <span class="feed-status" id="syncStatusIpca">Referência · set/2026</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-info" id="feedValIpca">4,58%</span>
+                  <span class="unit">a.a.</span>
+                </div>
+              </div>
+
+              <!-- Dívida Bruta (DBGG): % do PIB e R$ -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag">BCB SGS Séries 13762 e 13761</span>
+                  <strong>Dívida Bruta (DBGG)</strong>
+                  <span class="feed-status" id="syncStatusDbgg">Referência · ago/2026</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-down" id="feedValDbgg">82,87%</span>
+                  <span class="unit">do PIB · <span id="feedValDbggTri">R$ 11,05</span> Tri</span>
+                </div>
+              </div>
+
+              <!-- PIB 12 meses -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag">BCB SGS Série 4382</span>
+                  <strong>PIB Nominal 12 meses</strong>
+                  <span class="feed-status" id="syncStatusPib">Referência · set/2026</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-info" id="feedValPib">R$ 13,40</span>
+                  <span class="unit">Tri</span>
+                </div>
+              </div>
+
+              <!-- População IBGE -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag">IBGE SIDRA 6579</span>
+                  <strong>População Total</strong>
+                  <span class="feed-status" id="syncStatusPop">Referência · 2026</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-accent" id="feedValPop">214,21M</span>
+                  <span class="unit">habitantes</span>
+                </div>
+              </div>
+
+              <!-- Gastos da União (Tesouro SICONFI) -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag">Tesouro SICONFI RREO Anexo 02</span>
+                  <strong>Gastos da União 12 meses</strong>
+                  <span class="feed-status" id="syncStatusGastos">Referência · set/2025–ago/2026</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-down" id="feedValGastos">R$ 4,18</span>
+                  <span class="unit">Tri</span>
+                </div>
+              </div>
+
+              <!-- Eleitorado TSE -->
+              <div class="feed-card">
+                <div class="feed-meta">
+                  <span class="feed-tag">TSE Eleições 2026</span>
+                  <strong>Eleitorado Apto</strong>
+                  <span class="feed-status" id="syncStatusEleitores">Referência · 1º turno, inclui exterior</span>
+                </div>
+                <div class="feed-value">
+                  <span class="num text-accent" id="feedValEleitores">158,75M</span>
+                  <span class="unit">eleitores</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- INDICADORES CALCULADOS (os dados oficiais ficam nos cards de conexão acima) -->
+          <section class="macro-cards-grid" aria-label="Indicadores calculados a partir dos dados oficiais">
+            <div class="macro-kpi-card">
+              <span class="kpi-label">Juro Real (Fisher)</span>
+              <div class="kpi-value text-warn" id="macroJuroReal">8,77% a.a.</div>
+              <span class="kpi-sub">Selic descontado o IPCA 12 meses</span>
+            </div>
+
+            <div class="macro-kpi-card">
+              <span class="kpi-label">Impostos por <span data-base-label>habitante</span></span>
+              <div class="kpi-value text-accent" id="macroTaxPerCapita">R$ 21.394</div>
+              <span class="kpi-sub">por ano · <span id="macroArrecadacao">R$ 4,58 Tri</span> no total · <span id="macroCargaTrib">34,20%</span> do PIB</span>
+            </div>
+
+            <div class="macro-kpi-card">
+              <span class="kpi-label">Juros da dívida por <span data-base-label>habitante</span></span>
+              <div class="kpi-value text-warn" id="macroDebtPerCapita">R$ 3.209</div>
+              <span class="kpi-sub">por ano · <span id="macroJurosTotal">R$ 687,5 Bi</span> no total (Selic × R$ 50 Bi por ponto)</span>
+            </div>
+
+            <div class="macro-kpi-card">
+              <span class="kpi-label">Dívida bruta por <span data-base-label>habitante</span></span>
+              <div class="kpi-value text-down" id="macroDividaPerCapita">R$ 51.584</div>
+              <span class="kpi-sub">estoque acumulado, não é gasto anual</span>
+            </div>
+          </section>
+
+          <!-- GASTOS PÚBLICOS: GRÁFICO + TABELA POR HABITANTE E POR ELEITOR -->
+          <section class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <h3 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 0.5rem;">
+                  <span data-icon="chartBar" style="color: var(--accent);"></span>
+                  Impostos, Dívida e Gastos Públicos: por Habitante e por Eleitor
+                </h3>
+                <p>Totais anuais em R$ divididos pela população (IBGE) e pelo eleitorado apto (TSE 2026).</p>
+              </div>
+            </div>
+
+            <div class="analista-grid">
+              <div>
+                <h4 style="font-size: 0.85rem; margin-bottom: 0.5rem;">R$ por <span data-base-label>habitante</span> por ano</h4>
+                <div class="chart-bars-container">
+                  <canvas id="chartPerCapita" role="img" aria-label="Gráfico de barras: impostos e gastos públicos por pessoa por ano"></canvas>
+                </div>
+                <p class="chart-caption">A dívida bruta é estoque, não fluxo anual, por isso fica só na tabela.</p>
+              </div>
+
+              <div class="table-responsive">
+                <table class="sensibility-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th class="text-right">Total</th>
+                      <th class="text-right">% do PIB</th>
+                      <th class="text-right">Por Habitante</th>
+                      <th class="text-right">Por Eleitor</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tblPerfilFiscal">
+                    <!-- Renderizado dinamicamente pelo ObservatoryView -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <p class="chart-caption">Gastos: despesa liquidada da União em 12 meses (<span data-bind="periodoGastos">set/2025–ago/2026</span>), por função de governo, do RREO Anexo 02 do Tesouro Nacional (SICONFI), sem intra-orçamentárias e sem refinanciamento da dívida. "Serviço da dívida" é o juro e a amortização efetivamente pagos; a linha "Juros da dívida" é a estimativa Selic × custo por ponto. Só a União: estados e municípios ficam de fora.</p>
+          </section>
+
+          <!-- MATRIZ DE SENSIBILIDADE DA SELIC (TESOURO NACIONAL) -->
+          <section class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <h3 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 0.5rem;">
+                  <span data-icon="split" style="color: var(--gold);"></span>
+                  Matriz de Sensibilidade: Impacto da Selic na Dívida Mobiliária (Tesouro Nacional)
+                </h3>
+                <p>Simulação de desvio da Selic em relação à taxa atual e variação anual de despesa financeira do governo.</p>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="sensibility-table">
+                <thead>
+                  <tr>
+                    <th>Cenário Selic</th>
+                    <th class="text-center">Taxa Nominal</th>
+                    <th class="text-center">Juro Real Implícito (Fisher)</th>
+                    <th class="text-right">Despesa Anual com Juros</th>
+                    <th class="text-right">Variação vs Cenário Atual</th>
+                    <th class="text-right">Impacto por <span data-base-label>habitante</span></th>
+                  </tr>
+                </thead>
+                <tbody id="tblSensibilidadeSelic">
+                  <!-- Renderizado dinamicamente pelo ObservatoryView -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- ABA 2: SIMULADOR FISCAL & TRAJETÓRIA DA DÍVIDA -->
+        <div class="tab-pane" id="tabFiscal" role="tabpanel" aria-labelledby="btnTabFiscal">
+          <section class="glass-panel base-bar" aria-label="Base de cálculo">
+            <div>
+              <span class="base-label">Base de cálculo dos valores por pessoa</span><br>
+              <span class="base-hint">População IBGE: <strong class="text-white font-mono" data-bind="populacao">214.211.951</strong> · Eleitorado TSE 2026: <strong class="text-white font-mono" data-bind="eleitores">158.745.502</strong></span>
+            </div>
+            <div class="preset-buttons" role="group" aria-label="Escolher base de cálculo">
+              <button type="button" class="btn-preset highlight" data-base="populacao" aria-pressed="true">Por habitante</button>
+              <button type="button" class="btn-preset" data-base="eleitores" aria-pressed="false">Por eleitor</button>
+            </div>
+          </section>
+
+          <div class="two-column-layout">
+            <!-- Coluna de Controles (Esquerda) -->
+            <div class="glass-panel">
+              <div class="panel-header">
+                <div>
+                  <h3 style="font-size: 0.95rem; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+                    <span data-icon="sliders"></span>
+                    Ajustes de Política Fiscal & Monetária
+                  </h3>
+                  <p>Modifique as premissas para ver o reflexo imediato na dívida pública e na partilha orçamentária.</p>
+                </div>
+              </div>
+
+              <!-- Slider PIB Base -->
+              <div class="control-group">
+                <div class="control-header">
+                  <span class="control-label">PIB Base Nominal:</span>
+                  <span class="control-val text-info" id="fValPib">R$ 13,40 Tri</span>
+                </div>
+                <input type="range" id="fInputPib" min="10.0" max="16.0" step="0.1" value="13.4" aria-label="PIB Base Nominal">
+                <div class="control-scale">
+                  <span>R$ 10,0 Tri</span>
+                  <span>R$ 13,4 Tri (BCB 4382)</span>
+                  <span>R$ 16,0 Tri</span>
+                </div>
+              </div>
+
+              <!-- Slider Crescimento Real -->
+              <div class="control-group">
+                <div class="control-header">
+                  <span class="control-label">Crescimento Real do PIB:</span>
+                  <span class="control-val text-accent" id="fValGrowth">+2,00% a.a.</span>
+                </div>
+                <input type="range" id="fInputGrowth" min="-2.0" max="5.0" step="0.1" value="2.0" aria-label="Crescimento Real do PIB">
+                <div class="control-scale">
+                  <span>-2,0%</span>
+                  <span>+2,0% (SPE)</span>
+                  <span>+5,0%</span>
+                </div>
+              </div>
+
+              <!-- Slider Carga Tributária -->
+              <div class="control-group">
+                <div class="control-header">
+                  <span class="control-label">Carga Tributária Bruta:</span>
+                  <span class="control-val text-accent" id="fValTax">34,20%</span>
+                </div>
+                <input type="range" id="fInputTax" min="25.0" max="42.0" step="0.1" value="34.20" aria-label="Carga Tributária Bruta">
+                <div class="control-scale">
+                  <span>25,0%</span>
+                  <span>34,2% (Tesouro)</span>
+                  <span>42,0%</span>
+                </div>
+              </div>
+
+              <!-- Slider Taxa Selic -->
+              <div class="control-group">
+                <div class="control-header">
+                  <span class="control-label">Taxa Selic Nominal:</span>
+                  <span class="control-val text-warn" id="fValSelic">13,75% a.a.</span>
+                </div>
+                <input type="range" id="fInputSelic" min="6.0" max="16.0" step="0.25" value="13.75" aria-label="Taxa Selic Nominal">
+                <div class="control-scale">
+                  <span>6,0%</span>
+                  <span>13,75% (ref. out/2026)</span>
+                  <span>16,0%</span>
+                </div>
+              </div>
+
+              <!-- Slider IPCA -->
+              <div class="control-group">
+                <div class="control-header">
+                  <span class="control-label">Inflação IPCA:</span>
+                  <span class="control-val text-white" id="fValIpca">4,58% a.a.</span>
+                </div>
+                <input type="range" id="fInputIpca" min="2.0" max="9.0" step="0.01" value="4.58" aria-label="Inflação IPCA">
+                <div class="control-scale">
+                  <span>2,0%</span>
+                  <span>4,58% (12m, set/2026)</span>
+                  <span>9,0%</span>
+                </div>
+              </div>
+
+              <!-- Slider Variação das Despesas -->
+              <div class="control-group">
+                <div class="control-header">
+                  <span class="control-label">Variação Real das Despesas:</span>
+                  <span class="control-val" style="color: var(--accent-purple);" id="fValSpend">0,0% (Estável)</span>
+                </div>
+                <input type="range" id="fInputSpend" min="-6.0" max="6.0" step="0.5" value="0.0" aria-label="Variação Real das Despesas">
+                <div class="control-scale">
+                  <span>-6,0% (Ajuste)</span>
+                  <span>0,0%</span>
+                  <span>+6,0% (Expansão)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coluna de Gráficos (Direita) -->
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+              <!-- Resultado da simulação na base escolhida -->
+              <div class="glass-panel">
+                <div class="panel-header">
+                  <div>
+                    <h4 style="font-size: 0.95rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem;">
+                      <span data-icon="users" style="color: var(--accent);"></span>
+                      <span>Resultado da Simulação por <span data-base-label>habitante</span></span>
+                    </h4>
+                    <p>Valores do próximo ano divididos por <strong class="text-white font-mono" data-bind="pessoas">214.211.951</strong> <span data-base-plural>habitantes</span>.</p>
+                  </div>
+                </div>
+                <div class="sim-results-grid">
+                  <div class="macro-kpi-card">
+                    <span class="kpi-label">Imposto pago</span>
+                    <div class="kpi-value" id="simImposto">R$ 0</div>
+                    <span class="kpi-sub" id="simImpostoTotal">R$ 0 Tri / ano</span>
+                  </div>
+                  <div class="macro-kpi-card">
+                    <span class="kpi-label">Juros da dívida</span>
+                    <div class="kpi-value text-warn" id="simJuros">R$ 0</div>
+                    <span class="kpi-sub" id="simJurosTotal">R$ 0 Bi / ano</span>
+                  </div>
+                  <div class="macro-kpi-card">
+                    <span class="kpi-label">Resultado primário</span>
+                    <div class="kpi-value" id="simPrimario">R$ 0</div>
+                    <span class="kpi-sub" id="simPrimarioTotal">0% do PIB</span>
+                  </div>
+                  <div class="macro-kpi-card">
+                    <span class="kpi-label">Dívida bruta no ano 5</span>
+                    <div class="kpi-value text-down" id="simDividaAno5">R$ 0</div>
+                    <span class="kpi-sub" id="simDividaAno5Total">R$ 0 Tri</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Gráfico 1: Trajetória da Dívida -->
+              <div class="glass-panel">
+                <div class="panel-header">
+                  <div>
+                    <h4 style="font-size: 0.95rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem;">
+                      <span data-icon="chartLine" style="color: var(--gold);"></span>
+                      Trajetória da Dívida Bruta (% do PIB) em 5 Anos
+                    </h4>
+                    <p>Equação dinâmica: &Delta;d = d &middot; (r - g)/(1 + g) - s</p>
+                  </div>
+                  <span class="panel-header-badge text-gold" id="fBadgeAno5">Ano 5: 93,0% PIB</span>
+                </div>
+                <div class="chart-container">
+                  <canvas id="chartDebtTraj"></canvas>
+                </div>
+              </div>
+
+              <!-- Gráfico 2: Partilha do Orçamento -->
+              <div class="glass-panel">
+                <div class="panel-header">
+                  <div>
+                    <h4 style="font-size: 0.95rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem;">
+                      <span data-icon="chartPie" style="color: var(--info);"></span>
+                      Distribuição das Despesas da Receita Tributária
+                    </h4>
+                    <p>Previdência, juros da dívida pública, folha de servidores e investimentos.</p>
+                  </div>
+                </div>
+                <div class="chart-doughnut-container">
+                  <canvas id="chartBudgetPie"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+    </div>
+
+    <!-- RODAPÉ GOVERNAMENTAL -->
+    <footer class="gov-footer">
+      <!-- REFERÊNCIAS E FONTES -->
+      <section class="content-wrapper footer-fontes" aria-labelledby="tituloFontes">
+        <h2 id="tituloFontes" class="footer-fontes-titulo">
+          <span data-icon="info"></span>
+          Referências e fontes
+        </h2>
+        <div class="footer-fontes-grid">
+          <div>
+            <h3>Dados oficiais</h3>
+            <ul>
+              <li>
+                <a href="https://www3.bcb.gov.br/sgspub/" target="_blank" rel="noopener noreferrer">Banco Central do Brasil, Sistema Gerenciador de Séries Temporais (SGS)</a>:
+                séries <span class="font-mono">432</span> (meta Selic), <span class="font-mono">13522</span> (IPCA 12 meses),
+                <span class="font-mono">13762</span> e <span class="font-mono">13761</span> (dívida bruta do governo geral, % do PIB e R$),
+                <span class="font-mono">4382</span> (PIB 12 meses).
+                <a href="https://dadosabertos.bcb.gov.br/" target="_blank" rel="noopener noreferrer">API de dados abertos</a>.
+              </li>
+              <li>
+                <a href="https://sidra.ibge.gov.br/tabela/6579" target="_blank" rel="noopener noreferrer">IBGE, SIDRA tabela 6579</a>:
+                estimativa da população residente.
+                <a href="https://servicodados.ibge.gov.br/api/docs/agregados?versao=3" target="_blank" rel="noopener noreferrer">API de agregados</a>.
+              </li>
+              <li>
+                <a href="https://siconfi.tesouro.gov.br/" target="_blank" rel="noopener noreferrer">Tesouro Nacional, SICONFI</a>:
+                RREO Anexo 02, despesa liquidada da União por função, 12 meses.
+                <a href="https://apidatalake.tesouro.gov.br/docs/siconfi/" target="_blank" rel="noopener noreferrer">API do SICONFI</a>.
+              </li>
+              <li>
+                <a href="https://www.tse.jus.br/eleicoes/estatisticas/estatisticas-de-eleitorado" target="_blank" rel="noopener noreferrer">TSE, Estatísticas do eleitorado</a>:
+                eleitorado apto nas Eleições 2026, 1º turno, com o exterior.
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3>Parâmetros e premissas</h3>
+            <ul>
+              <li>
+                <a href="https://www.tesourotransparente.gov.br/" target="_blank" rel="noopener noreferrer">Tesouro Transparente</a>:
+                carga tributária bruta do governo geral (<span class="font-mono">34,2%</span> do PIB) e custo da dívida por ponto de Selic (<span class="font-mono">~R$ 50 Bi</span>).
+              </li>
+              <li>
+                <a href="https://www.gov.br/fazenda/pt-br/orgaos/spe" target="_blank" rel="noopener noreferrer">Secretaria de Política Econômica (Fazenda)</a>:
+                crescimento real do PIB projetado.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <div class="content-wrapper footer-content">
+        <div>
+          <strong>Observatório Fiscal & Macroeconômico do Brasil</strong> • Conector Oficial BCB / IBGE
+        </div>
+        <div>
+          Desenvolvedor: Systekna · out/2026
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS (Substituição a alerts) -->
+  <div class="toast-container" id="toastNotification" role="alert" aria-live="assertive">
+    <div class="toast-icon" data-icon="checkCircle"></div>
+    <div id="toastMessage">Operação realizada com sucesso.</div>
+  </div>
+
+  <!-- ENTRYPOINT DA APLICAÇÃO (ES6 MODULE) -->
+  <script type="module" src="src/program.js?v=20261028d"></script>
+</body>
+</html>
