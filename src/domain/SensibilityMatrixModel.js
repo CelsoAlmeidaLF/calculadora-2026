@@ -1,5 +1,5 @@
-import { FisherModel } from './FisherModel.js?v=20261028-1820';
-import { UnionBudgetModel } from './UnionBudgetModel.js?v=20261028-1820';
+import { FisherModel } from './FisherModel.js?v=20261028-1822';
+import { UnionBudgetModel } from './UnionBudgetModel.js?v=20261028-1822';
 
 /**
  * Camada de Domínio: Matriz de Sensibilidade do Tesouro Nacional

@@ -1,11 +1,12 @@
-import { GovApiGateway } from './infrastructure/GovApiGateway.js?v=20261028-1820';
-import { ChartAdapter } from './infrastructure/ChartAdapter.js?v=20261028-1820';
-import { MacroObservatoryService } from './application/MacroObservatoryService.js?v=20261028-1820';
-import { LocalSnapshotStore } from './infrastructure/LocalSnapshotStore.js?v=20261028-1820';
-import { ObservatoryView } from './ui/ObservatoryView.js?v=20261028-1820';
-import { CenarioUrl } from './ui/CenarioUrl.js?v=20261028-1820';
-import { SvgIcons, renderIcons } from './ui/SvgIcons.js?v=20261028-1820';
-import { StkGovShell, renderStkIcons } from '../vendor/stk-gov/stk-gov-shell.js?v=20261028-1820';
+import { GovApiGateway } from './infrastructure/GovApiGateway.js?v=20261028-1822';
+import { ChartAdapter } from './infrastructure/ChartAdapter.js?v=20261028-1822';
+import { MacroObservatoryService } from './application/MacroObservatoryService.js?v=20261028-1822';
+import { LocalSnapshotStore } from './infrastructure/LocalSnapshotStore.js?v=20261028-1822';
+import { ObservatoryView } from './ui/ObservatoryView.js?v=20261028-1822';
+import { CenarioUrl } from './ui/CenarioUrl.js?v=20261028-1822';
+import { SvgIcons, renderIcons } from './ui/SvgIcons.js?v=20261028-1822';
+import { StkGovPwa } from '../vendor/stk-gov/stk-gov-pwa.js?v=20261028-1822';
+import { StkGovShell, renderStkIcons } from '../vendor/stk-gov/stk-gov-shell.js?v=20261028-1822';
 
 /**
  * Composition Root da Aplicação
@@ -43,6 +44,11 @@ export class Program {
     });
     const shell = new StkGovShell({ app: 'calculadora', onTabChange: aba => viewInstance.aoTrocarAba(aba) });
     shell.iniciar();
+
+    // PWA: abre sem internet e pode ser instalado (botão "Instalar" aparece quando o navegador oferece)
+    const pwa = new StkGovPwa('sw.js');
+    pwa.init();
+    pwa.ligarBotao(document.getElementById('btnInstallApp'));
 
     // 5. Inicializar Gráficos Chart.js
     const canvasDebt = document.getElementById('chartDebtTraj');

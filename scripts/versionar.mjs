@@ -40,4 +40,20 @@ for (const p of arquivos) {
     (_, kw, q, caminho) => { total++; return `${kw}${q}${caminho}?v=${versao}${q}`; });
   if (depois !== antes) writeFileSync(p, depois);
 }
-console.log(`Versão ${versao}: index.html e ${total} imports em ${arquivos.length} arquivos.`);
+// sw.js: versão do cache e lista do app shell (com as mesmas URLs versionadas que a página pede)
+const shell = ['./', 'index.html', 'manifest.webmanifest'];
+for (const [, caminho] of index.matchAll(/(?:href|src)="((?:css|vendor|src|icons)\/[^"#]+)"/g)) shell.push(caminho);
+for (const p of arquivos) {
+  const rel = p.slice(raiz.length).replace(/\\/g, '/').replace(/^\//, '');
+  shell.push(`${rel}?v=${versao}`);
+}
+const fontes = join(raiz, 'vendor', 'fonts');
+for (const nome of readdirSync(fontes)) if (nome.endsWith('.woff2')) shell.push(`vendor/fonts/${nome}`);
+shell.push(`vendor/stk-gov/stk-gov-shell.js?v=${versao}`, `vendor/stk-gov/stk-gov-pwa.js?v=${versao}`, 'icons/app-icon-512.png');
+const unicos = [...new Set(shell)];
+const swPath = join(raiz, 'sw.js');
+const sw = readFileSync(swPath, 'utf8').replace(/\/\/ <versionar>[\s\S]*?\/\/ <\/versionar>/,
+  `// <versionar>\nconst CACHE_VERSION = 'calculadora-${versao}';\nconst APP_SHELL = ${JSON.stringify(unicos, null, 2)};\n// </versionar>`);
+writeFileSync(swPath, sw);
+
+console.log(`Versão ${versao}: index.html, ${total} imports em ${arquivos.length} arquivos e ${unicos.length} itens no sw.js.`);
