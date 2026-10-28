@@ -8,6 +8,7 @@ import { UnionBudgetModel } from '../src/domain/UnionBudgetModel.js';
 import { MacroObservatoryService } from '../src/application/MacroObservatoryService.js';
 import { GovApiGateway } from '../src/infrastructure/GovApiGateway.js';
 import { LocalSnapshotStore } from '../src/infrastructure/LocalSnapshotStore.js';
+import { CenarioUrl } from '../src/ui/CenarioUrl.js';
 
 /**
  * Suite de Testes Unitários: Modelos Econômicos e Matemáticos
@@ -180,6 +181,17 @@ assert(reaberto.state.fontes.ipca.salvo === true && reaberto.state.fontes.ipca.a
 assert(reaberto.getPublicFinanceProfile().juros.bi === 500, 'Orçamento da União também volta do salvo');
 assert(new MacroObservatoryService({ cache: new LocalSnapshotStore({ storage: { getItem: () => '{quebrado', setItem() {} } }) }).restaurarSalvo() === false, 'Salvo corrompido é ignorado');
 assert(new LocalSnapshotStore({ storage: null }).ler() === null, 'Sem armazenamento (navegação privada), segue sem salvo');
+
+// 6c. Link do cenário
+console.log('\n6c. Teste do CenarioUrl (cenário no endereço da página)');
+const link = CenarioUrl.montar('https://x/index.html#velho', { selic: 11, ipca: 4.5, base: 'eleitores', aba: 'tabFiscal', grafico: 'total' });
+assert(link === 'https://x/index.html#selic=11&ipca=4.5&base=eleitores&aba=tabFiscal&grafico=total', 'Monta o link com os valores e troca o # antigo');
+const lido = CenarioUrl.ler(link);
+assert(lido.selic === 11 && lido.ipca === 4.5 && lido.base === 'eleitores' && lido.aba === 'tabFiscal' && lido.grafico === 'total', 'Lê de volta o mesmo cenário');
+assert(!CenarioUrl.montar('https://x/', { grafico: 'pessoa' }).includes('grafico'), 'Gráfico por pessoa (padrão) não vai no link');
+const invalido = CenarioUrl.ler('https://x/#selic=99&base=municipios&grafico=pizza&ipca=3,5');
+assert(invalido.selic === undefined && invalido.base === undefined && invalido.grafico === undefined && invalido.ipca === 3.5, 'Valores fora da faixa ou desconhecidos são ignorados; vírgula decimal é aceita');
+assert(CenarioUrl.ler('https://x/index.html') === null, 'Sem # não há cenário');
 
 // 7. Valores por habitante e por eleitor
 console.log('\n7. Teste do Perfil por Habitante e por Eleitor');

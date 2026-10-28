@@ -1,5 +1,5 @@
-import { renderIcons } from './SvgIcons.js?v=20261028-1838';
-import { CenarioUrl } from './CenarioUrl.js?v=20261028-1838';
+import { renderIcons } from './SvgIcons.js?v=20261028-1842';
+import { CenarioUrl } from './CenarioUrl.js?v=20261028-1842';
 
 /** Número no padrão brasileiro com casas fixas: fmt(13.4, 2) → "13,40" */
 const fmt = (v, casas) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
@@ -13,14 +13,16 @@ const brl = v => `${v < 0 ? '-' : ''}R$ ${Math.abs(Math.round(v)).toLocaleString
 export class ObservatoryView {
   /**
    * @param {Object} params
-   * @param {import('../application/MacroObservatoryService.js?v=20261028-1838').MacroObservatoryService} params.service
-   * @param {import('../infrastructure/ChartAdapter.js?v=20261028-1838').ChartAdapter} params.chartAdapter
+   * @param {import('../application/MacroObservatoryService.js?v=20261028-1842').MacroObservatoryService} params.service
+   * @param {import('../infrastructure/ChartAdapter.js?v=20261028-1842').ChartAdapter} params.chartAdapter
    */
   constructor({ service, chartAdapter }) {
     this.service = service;
     this.chartAdapter = chartAdapter;
 
     this.activeTab = 'tabAPIs';
+    // Gráfico de impostos e gastos: 'pessoa' (por habitante ou eleitor) ou 'total' (R$ Bi / Tri)
+    this.modoGrafico = 'pessoa';
     this.cachedFiscalResult = null;
 
     this._bindElements();
@@ -104,6 +106,11 @@ export class ObservatoryView {
       this.btnSyncAPI.addEventListener('click', () => this.handleSyncClick());
     }
 
+    // Gráfico: por pessoa ou valor total
+    document.querySelectorAll('[data-grafico]').forEach(btn => {
+      btn.addEventListener('click', () => this.setModoGrafico(btn.dataset.grafico));
+    });
+
     // Base de cálculo: habitante (IBGE) ou eleitor (TSE)
     document.querySelectorAll('[data-base]').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -160,7 +167,7 @@ export class ObservatoryView {
     return {
       pib: s.pibBaseTri, crescimento: s.pibReal, carga: s.taxRatio,
       selic: s.selic, ipca: s.ipca, gastos: s.spendVariation,
-      base: s.baseCalculo, aba: this.activeTab
+      base: s.baseCalculo, aba: this.activeTab, grafico: this.modoGrafico
     };
   }
 
@@ -177,7 +184,9 @@ export class ObservatoryView {
     ];
     campos.forEach(([input, valor]) => { if (input && valor !== undefined) input.value = valor; });
     this.handleFiscalInputChange();
+    if (cenario.grafico) this.modoGrafico = cenario.grafico;
     if (cenario.base) this.service.setBaseCalculo(cenario.base);
+    this.render();
     return cenario.aba || null;
   }
 
@@ -347,8 +356,7 @@ export class ObservatoryView {
     // 2b. Impostos, dívida e gastos: tabela (as duas bases) e gráfico (base escolhida)
     this.renderPerfilFiscal(perfil);
     const fluxos = [perfil.imposto, perfil.gastosTotal, ...perfil.gastos];
-    this.chartAdapter.updatePerCapita(fluxos.map(l => l.rotulo), fluxos.map(porBase), base.singular);
-    this.renderListaBarras(fluxos, porBase);
+    this.renderGrafico(fluxos, porBase, base);
     document.getElementById('tabelaPerfil')?.classList.toggle('base-eleitores', base.chave === 'eleitores');
 
     // 3. Renderizar Matriz de Sensibilidade do Tesouro
@@ -359,11 +367,51 @@ export class ObservatoryView {
   }
 
   /**
+   * Troca o gráfico entre valor por pessoa e valor total
+   * @param {'pessoa'|'total'} modo
+   */
+  setModoGrafico(modo) {
+    if (!['pessoa', 'total'].includes(modo) || modo === this.modoGrafico) return;
+    this.modoGrafico = modo;
+    this.render();
+  }
+
+  /**
+   * Gráfico de impostos e gastos (barras no computador, lista no celular) no modo escolhido
+   * @param {Array<Object>} linhas Linhas do perfil fiscal
+   * @param {(linha: Object) => number} porBase Valor por pessoa na base escolhida
+   * @param {Object} base Base de cálculo (singular: 'habitante' | 'eleitor')
+   */
+  renderGrafico(linhas, porBase, base) {
+    const total = this.modoGrafico === 'total';
+    const valor = total ? (l => l.bi) : porBase;
+    const formatar = total ? ObservatoryView.reaisBi : brl;
+    document.querySelectorAll('[data-grafico]').forEach(btn => {
+      const ativo = btn.dataset.grafico === this.modoGrafico;
+      btn.classList.toggle('active', ativo);
+      btn.setAttribute('aria-pressed', String(ativo));
+    });
+    const titulo = document.getElementById('tituloGrafico');
+    if (titulo) titulo.textContent = total ? 'Valor total por ano (R$)' : `R$ por ${base.singular} por ano`;
+    this.chartAdapter.updatePerCapita(linhas.map(l => l.rotulo), linhas.map(valor), {
+      formatar,
+      descricao: total ? 'por ano' : `por ${base.singular} / ano`
+    });
+    this.renderListaBarras(linhas, valor, formatar);
+  }
+
+  /** Valor em R$ Bi como texto curto: 509.5 → "R$ 509,5 Bi"; 2817 → "R$ 2,82 Tri" */
+  static reaisBi(bi) {
+    return bi >= 1000 ? `R$ ${fmt(bi / 1000, 2)} Tri` : `R$ ${fmt(bi, 1)} Bi`;
+  }
+
+  /**
    * Gráfico de barras em forma de lista, para o celular (nome e valor em cima, barra fina embaixo)
    * @param {Array<Object>} linhas
    * @param {(linha: Object) => number} valor
+   * @param {(v: number) => string} [formatar]
    */
-  renderListaBarras(linhas, valor) {
+  renderListaBarras(linhas, valor, formatar = brl) {
     const lista = document.getElementById('listaPerCapita');
     if (!lista) return;
     const maximo = Math.max(...linhas.map(valor), 1);
@@ -372,7 +420,7 @@ export class ObservatoryView {
       const tipo = i === 0 ? 'receita' : (i === 1 ? 'total' : 'gasto');
       return `<li class="lb-item lb-${tipo}">
         <span class="lb-nome">${l.rotulo}</span>
-        <span class="lb-valor">${brl(v)}</span>
+        <span class="lb-valor">${formatar(v)}</span>
         <span class="lb-trilho" aria-hidden="true"><span class="lb-barra" style="width: ${Math.max(1, (v / maximo) * 100).toFixed(1)}%"></span></span>
       </li>`;
     }).join('');

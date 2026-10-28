@@ -42,6 +42,16 @@
   gap: 24px;
 }
 
+/* Título do gráfico com o seletor "Por habitante / Valor total" ao lado */
+.grafico-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
 .chart-bars-container {
   position: relative;
   width: 100%;

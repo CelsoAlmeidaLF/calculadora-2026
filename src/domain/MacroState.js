@@ -1,5 +1,5 @@
-import { DESPESAS_UNIAO_REFERENCIA } from './referencia/DespesasUniaoReferencia.js?v=20261028-1838';
-import { ORCAMENTO_UNIAO_REFERENCIA } from './referencia/OrcamentoUniaoReferencia.js?v=20261028-1838';
+import { DESPESAS_UNIAO_REFERENCIA } from './referencia/DespesasUniaoReferencia.js?v=20261028-1842';
+import { ORCAMENTO_UNIAO_REFERENCIA } from './referencia/OrcamentoUniaoReferencia.js?v=20261028-1842';
 
 /**
  * Camada de Domínio: Entidade MacroState

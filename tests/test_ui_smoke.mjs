@@ -103,6 +103,17 @@ try {
   assert(e.recolhida, 'Barra recolhida continua recolhida depois de recarregar');
   await avaliar('btnToggleSidebar.click()'); await esperar(500);
   assert((await estado()).largura === 248, 'Botão de menu expande a barra de novo');
+  // Gráfico: por pessoa ↔ valor total
+  assert(await avaliar('tituloGrafico.textContent') === 'R$ por habitante por ano', 'Gráfico começa com valores por habitante');
+  await avaliar('document.querySelector("[data-grafico=total]").click()'); await esperar(300);
+  const totalLista = JSON.parse(await avaliar('JSON.stringify({titulo: tituloGrafico.textContent, primeiro: document.querySelector("#listaPerCapita .lb-valor").textContent, ativo: document.querySelector("[data-grafico=total]").getAttribute("aria-pressed")})'));
+  assert(totalLista.titulo === 'Valor total por ano (R$)' && /Tri|Bi/.test(totalLista.primeiro) && totalLista.ativo === 'true', `"Valor total" mostra R$ Bi/Tri (${totalLista.primeiro})`);
+  await avaliar('document.querySelector("[data-base=eleitores]").click()'); await esperar(300);
+  assert(await avaliar('tituloGrafico.textContent') === 'Valor total por ano (R$)', 'Trocar a base não desfaz o modo "Valor total"');
+  await avaliar('document.querySelector("[data-grafico=pessoa]").click()'); await esperar(300);
+  assert(await avaliar('tituloGrafico.textContent') === 'R$ por eleitor por ano', 'Voltar a "por pessoa" segue a base escolhida (eleitor)');
+  await avaliar('document.querySelector("[data-base=populacao]").click()'); await esperar(200);
+
   await avaliar('btnTabFiscal.click()'); await esperar(300);
   assert((await estado()).aba === 'tabFiscal', 'Item da barra lateral troca para o simulador');
   await avaliar('document.querySelector(".action-menu [aria-haspopup]").click()'); await esperar(200);

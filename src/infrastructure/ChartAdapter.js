@@ -2,6 +2,9 @@
  * Camada de Infraestrutura: ChartAdapter
  * Adaptador para Chart.js 4.4.1 integrado com os tokens visuais do Design System Systekna.
  */
+/** Formato padrão: reais inteiros (R$ por pessoa) */
+const reaisInteiros = v => `R$ ${Math.round(v).toLocaleString('pt-BR')}`;
+
 /** Valor em reais escrito ao lado de cada barra horizontal (ou dentro dela, se não couber à direita) */
 const rotuloDasBarras = {
   id: 'rotuloDasBarras',
@@ -13,7 +16,7 @@ const rotuloDasBarras = {
     ctx.font = '600 11px "IBM Plex Mono", monospace';
     ctx.textBaseline = 'middle';
     meta.data.forEach((barra, i) => {
-      const texto = `R$ ${Math.round(valores[i]).toLocaleString('pt-BR')}`;
+      const texto = (chart.$stkFormatar || reaisInteiros)(valores[i]);
       const largura = ctx.measureText(texto).width;
       const cabeFora = barra.x + 6 + largura <= chartArea.right;
       ctx.textAlign = cabeFora ? 'left' : 'right';
@@ -201,7 +204,7 @@ export class ChartAdapter {
     if (!canvasEl || typeof Chart === 'undefined') return;
     if (this.perCapitaChart) this.perCapitaChart.destroy();
 
-    this.perCapitaBase = 'habitante';
+    this.perCapitaDescricao = 'por habitante / ano';
     const ctx = canvasEl.getContext('2d');
     this.perCapitaChart = new Chart(ctx, {
       type: 'bar',
@@ -233,7 +236,7 @@ export class ChartAdapter {
             titleFont: { family: 'Inter' },
             bodyFont: { family: 'IBM Plex Mono' },
             callbacks: {
-              label: c => ` R$ ${Math.round(c.raw).toLocaleString('pt-BR')} por ${this.perCapitaBase} / ano`
+              label: c => ` ${(c.chart.$stkFormatar || reaisInteiros)(c.raw)} ${this.perCapitaDescricao}`
             }
           }
         },
@@ -262,14 +265,17 @@ export class ChartAdapter {
   }
 
   /**
-   * Atualiza as barras de R$ por pessoa
+   * Atualiza as barras (R$ por pessoa ou valor total)
    * @param {string[]} labels
    * @param {number[]} values
-   * @param {string} baseSingular 'habitante' ou 'eleitor'
+   * @param {Object} [opcoes]
+   * @param {(v: number) => string} [opcoes.formatar] Texto do valor (rótulo da barra e tooltip)
+   * @param {string} [opcoes.descricao] Complemento do tooltip, ex.: "por habitante / ano"
    */
-  updatePerCapita(labels, values, baseSingular) {
-    this.perCapitaBase = baseSingular;
+  updatePerCapita(labels, values, { formatar = reaisInteiros, descricao = 'por ano' } = {}) {
+    this.perCapitaDescricao = descricao;
     if (this.perCapitaChart) {
+      this.perCapitaChart.$stkFormatar = formatar;
       this.perCapitaChart.data.labels = labels;
       this.perCapitaChart.data.datasets[0].data = values;
       this.perCapitaChart.update();

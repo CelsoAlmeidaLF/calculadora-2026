@@ -16,6 +16,7 @@ const NUMEROS = Object.freeze({
 });
 const BASES = ['populacao', 'eleitores'];
 const ABAS = ['tabAPIs', 'tabFiscal'];
+const GRAFICOS = ['pessoa', 'total'];
 
 export class CenarioUrl {
   /**
@@ -36,13 +37,14 @@ export class CenarioUrl {
     }
     if (BASES.includes(params.get('base'))) cenario.base = params.get('base');
     if (ABAS.includes(params.get('aba'))) cenario.aba = params.get('aba');
+    if (GRAFICOS.includes(params.get('grafico'))) cenario.grafico = params.get('grafico');
     return Object.keys(cenario).length ? cenario : null;
   }
 
   /**
    * Monta o endereço com o cenário
    * @param {string} href Endereço atual
-   * @param {Object} cenario { pib, crescimento, carga, selic, ipca, gastos, base, aba }
+   * @param {Object} cenario { pib, crescimento, carga, selic, ipca, gastos, base, aba, grafico }
    */
   static montar(href, cenario) {
     const params = new URLSearchParams();
@@ -51,6 +53,8 @@ export class CenarioUrl {
     }
     if (cenario.base) params.set('base', cenario.base);
     if (cenario.aba) params.set('aba', cenario.aba);
+    // "por pessoa" é o padrão: só vai no link quando é o total
+    if (cenario.grafico === 'total') params.set('grafico', 'total');
     return `${String(href).split('#')[0]}#${params.toString()}`;
   }
 }

@@ -18,10 +18,10 @@
   <meta name="apple-mobile-web-app-title" content="Calculadora">
 
   <!-- Design system comum dos projetos 8.X (cópia de _design-system/, não editar aqui) + estilos do conteúdo -->
-  <link rel="stylesheet" href="css/fonts.css?v=20261028-1838">
-  <link rel="stylesheet" href="vendor/stk-gov/stk-gov.css?v=20261028-1838">
-  <link rel="stylesheet" href="css/style.css?v=20261028-1838">
-  <link rel="stylesheet" href="css/analista.css?v=20261028-1838">
+  <link rel="stylesheet" href="css/fonts.css?v=20261028-1842">
+  <link rel="stylesheet" href="vendor/stk-gov/stk-gov.css?v=20261028-1842">
+  <link rel="stylesheet" href="css/style.css?v=20261028-1842">
+  <link rel="stylesheet" href="css/analista.css?v=20261028-1842">
   
   <!-- Biblioteca Vendored Local-First para Gráficos -->
   <script src="vendor/chart.js/chart.umd.js"></script>
@@ -299,7 +299,13 @@
 
             <div class="analista-grid">
               <div>
-                <h4 style="font-size: 0.85rem; margin-bottom: 0.5rem;">R$ por <span data-base-label>habitante</span> por ano</h4>
+                <div class="grafico-cabecalho">
+                  <h4 id="tituloGrafico" style="font-size: 0.85rem;">R$ por <span data-base-label>habitante</span> por ano</h4>
+                  <div class="segmented-control" role="group" aria-label="Mostrar valores do gráfico">
+                    <button type="button" class="segmented-control-btn active" data-grafico="pessoa" aria-pressed="true">Por <span data-base-label>habitante</span></button>
+                    <button type="button" class="segmented-control-btn" data-grafico="total" aria-pressed="false">Valor total</button>
+                  </div>
+                </div>
                 <div class="chart-bars-container">
                   <canvas id="chartPerCapita" role="img" aria-label="Gráfico de barras: impostos e gastos públicos por pessoa por ano"></canvas>
                 </div>
@@ -629,6 +635,6 @@
   </div>
 
   <!-- ENTRYPOINT DA APLICAÇÃO (ES6 MODULE) -->
-  <script type="module" src="src/Program.js?v=20261028-1838"></script>
+  <script type="module" src="src/Program.js?v=20261028-1842"></script>
 </body>
 </html>
