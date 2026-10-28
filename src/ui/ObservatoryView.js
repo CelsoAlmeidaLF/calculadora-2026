@@ -333,6 +333,7 @@ export class ObservatoryView {
     if (this.feedValReceita) this.feedValReceita.textContent = `R$ ${fmt(perfil.imposto.bi / 1000, 2)}`;
     if (this.syncStatusReceita) this.syncStatusReceita.textContent = status(m.fontes.orcamento);
     document.querySelectorAll('[data-bind="periodoGastos"]').forEach(el => { el.textContent = m.fontes.despesas.periodo; });
+    document.querySelectorAll('[data-spark]').forEach(el => ObservatoryView.desenharMinigrafico(el, m.historicos[el.dataset.spark]));
 
     // 2. Indicadores calculados (os dados oficiais ficam nos cards de conexão)
     if (this.macroCargaTrib) this.macroCargaTrib.textContent = `${fmt(m.receitaPctPib, 1)}%`;
@@ -377,6 +378,33 @@ export class ObservatoryView {
       linha(perfil.gastosTotal) +
       perfil.gastos.map(g => linha(g, ` <span class="text-muted">(${fmt(g.pctGastos, 1)}%)</span>`)).join('');
     ObservatoryView.rotularColunas(this.tblPerfilFiscal);
+  }
+
+  /**
+   * Minigráfico de linha dos últimos 12 meses (SVG), na cor do valor do card
+   * @param {HTMLElement} el
+   * @param {Array<{data: string, valor: number}>} [serie]
+   */
+  static desenharMinigrafico(el, serie) {
+    if (!Array.isArray(serie) || serie.length < 2) { el.hidden = true; return; }
+    const L = 72, A = 22, M = 2;
+    const valores = serie.map(p => p.valor);
+    const min = Math.min(...valores);
+    const faixa = (Math.max(...valores) - min) || 1;
+    const pontos = valores.map((v, i) => [
+      M + (i * (L - 2 * M)) / (valores.length - 1),
+      A - M - ((v - min) * (A - 2 * M)) / faixa
+    ]);
+    const caminho = pontos.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    const [ux, uy] = pontos[pontos.length - 1];
+    const num = v => v.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+    el.innerHTML = `<svg viewBox="0 0 ${L} ${A}" width="${L}" height="${A}" aria-hidden="true">`
+      + `<path d="${caminho}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`
+      + `<circle cx="${ux.toFixed(1)}" cy="${uy.toFixed(1)}" r="2" fill="currentColor"/></svg>`;
+    el.title = `Últimos 12 meses: de ${num(valores[0])} (${serie[0].data}) a ${num(valores[valores.length - 1])} (${serie[serie.length - 1].data})`;
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', el.title);
+    el.hidden = false;
   }
 
   /**

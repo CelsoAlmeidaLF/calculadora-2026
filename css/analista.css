@@ -128,3 +128,12 @@
   .tabela-cards tr.baseline-row { box-shadow: inset 3px 0 0 var(--br-green-text); }
   .table-responsive:has(.tabela-cards) { overflow-x: visible; }
 }
+
+/* Minigráfico de 12 meses nos cards de dados oficiais (cor do valor do card) */
+.feed-spark { display: block; margin-top: 4px; opacity: 0.85; }
+.feed-spark[hidden] { display: none; }
+.feed-spark svg { display: block; margin-left: auto; }
+.feed-value:has(.text-warn) .feed-spark { color: var(--warn); }
+.feed-value:has(.text-info) .feed-spark { color: var(--info); }
+.feed-value:has(.text-down) .feed-spark { color: var(--down); }
+.feed-value:has(.text-accent) .feed-spark { color: var(--accent); }
